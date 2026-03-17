@@ -1,0 +1,19 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt       # Enforce Go code formatting standards
+    - govet       # Detect potential logical errors
+    - errcheck    # Ensure all returned errors are handled
+    - staticcheck # Advanced static analysis tool
+    - revive      # Modern Go linter (replacement for golint)
+    - gosimple    # Simplify source code
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck # Allow skipping error checks in some test files
