@@ -1,0 +1,21 @@
+name: TLA+ Formal Verification
+
+on:
+  push:
+    paths:
+      - 'spec/**'
+
+jobs:
+  verify-fsm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+      - name: Download TLA+ Tools
+        run: curl -L -o tla2tools.jar https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+      - name: Run TLC Model Checker
+        run: java -jar tla2tools.jar -modelcheck -config spec/EngramFSM.cfg spec/EngramFSM.tla

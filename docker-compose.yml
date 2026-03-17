@@ -1,0 +1,41 @@
+name: Engram Network
+
+services:
+  node0:
+  build: 
+    context: .
+    dockerfile: Dockerfile
+  container_name: engram_node0
+  networks:
+    engram_net:
+      ipv4_address: 172.20.0.10
+  ports:
+    - "26657:26657" # Tendermint RPC (Dành cho script Python gửi lệnh)
+    - "1317:1317"   # Cosmos REST API
+    - "26660:26660" # Prometheus Metrics
+  environment:
+    - DA_ENDPOINT=http://celestia_mock:8080
+    - MINIMUM_GAS_PRICES=0strat
+  command: ["stratiumd", "start", "--prometheus"]
+
+
+  
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./scripts/telemetry/prometheus.yml:/etc/prometheus/prometheus.yml
+  
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+
+
+networks:
+  engram_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
