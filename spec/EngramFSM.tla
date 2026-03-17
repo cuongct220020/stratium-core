@@ -1,7 +1,7 @@
 --------------------------- MODULE EngramFSM ---------------------------
 EXTENDS Integers, Sequences
 
-CONSTANTS T1, T2 \* Ngưỡng nghi ngờ và Ngưỡng tự trị (T1 < T2)
+CONSTANTS T1, T2 \* Thresholds for Suspicious and Sovereign states (T1 < T2)
 VARIABLES state, gap, connection
 
 States == {"ANCHORED", "SUSPICIOUS", "SOVEREIGN"}
@@ -31,6 +31,9 @@ SovereignToAnchored ==
     /\ state' = "ANCHORED"
     /\ UNCHANGED <<gap, connection>>
 
-\* Invariant: Đảm bảo hệ thống luôn có thể phục hồi về Anchored (Liveness)
+\* Invariant: Ensure the system can always recover to Anchored (Liveness)
 Liveness == WF_vars(SovereignToAnchored)
+
+\* Safety: Ensure the FSM remains in valid states
+TypeOK == state \in States
 =============================================================================
