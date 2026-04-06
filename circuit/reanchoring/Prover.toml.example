@@ -1,0 +1,9 @@
+epoch_id = "0"
+merkle_path = ["0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"]
+old_balance = "0"
+old_reputation = "0"
+penalty_amount = "0"
+reward_amount = "0"
+state_root_new = "0"
+state_root_old = "0"
+validator_id = "0"
