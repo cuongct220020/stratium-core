@@ -1,0 +1,120 @@
+name: engram-validator-cluster
+
+include:
+  - ./docker/monitoring-services.yml
+  - ./docker/bitcoin-regtest-cluster.yml
+  - ./docker/celestia-local-cluster.yml
+  - ./docker/engram-validator-node01.yml
+  - ./docker/engram-validator-node02.yml
+  - ./docker/engram-validator-node03.yml
+  - ./docker/engram-validator-node04.yml
+
+services:
+  # ==========================================
+  # CHAOS ENGINEERING PROFILES (PUMBA)
+  # ==========================================
+  
+  pumba-latency:
+    image: gaiaadm/pumba:latest
+    container_name: pumba-latency-injector
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Mount Docker socket for container manipulation
+    profiles:
+      - chaos-delay
+    # SCENARIO: Inject 100ms latency (±20ms jitter) for 5m to all stratium-node containers
+    command: 
+      - "netem"
+      - "--duration=5m"
+      - "delay"
+      - "--time=100"
+      - "--jitter=20"
+      - "re2:^stratium-node-.*"
+
+  pumba-loss:
+    image: gaiaadm/pumba:latest
+    container_name: pumba-loss-injector
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    profiles:
+      - chaos-loss
+    # SCENARIO: Packet Loss - Drop 5% of network traffic on nodes 01 and 02 for 2m
+    command: 
+      - "netem"
+      - "--duration=2m"
+      - "loss"
+      - "--percent=5"
+      - "stratium-node-01"
+      - "stratium-node-02"
+
+  pumba-kill:
+    image: gaiaadm/pumba:latest
+    container_name: pumba-crash-injector
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    profiles:
+      - chaos-crash
+    # SCENARIO: Crash Fault - Forcefully terminate node 04 immediately
+    command: 
+      - "kill"
+      - "--signal=SIGKILL"
+      - "stratium-node-04"
+
+  pumba-eclipse:
+    image: gaiaadm/pumba:latest
+    container_name: pumba-eclipse-injector
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    profiles:
+      - chaos-eclipse
+    # SCENARIO: Eclipse Attack - Isolate node 01 by dropping 100% of its traffic for 3m
+    command: 
+      - "netem"
+      - "--duration=3m"
+      - "loss"
+      - "--percent=100"
+      - "stratium-node-01"
+
+networks:
+  # Main validator network: All validators and monitoring tools communicate here
+  engram-net:
+    name: engram-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: "br-engram"
+      com.docker.network.driver.mtu: "1500"
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+
+  # Bitcoin network: Isolated environment for Bitcoin RPC and vigilante services
+  bitcoin-net:
+    name: bitcoin-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: "br-bitcoin"
+      com.docker.network.driver.mtu: "1500"
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+          gateway: 172.21.0.1
+
+  # Celestia network: Isolated environment for Celestia DA layer
+  celestia-net:
+    name: celestia-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: "br-celestia"
+      com.docker.network.driver.mtu: "1500"
+    ipam:
+      config:
+        - subnet: 172.22.0.0/24
+          gateway: 172.22.0.1
+
+volumes:
+  prometheus-data:
+    name: prometheus-data
+    driver: local
+  grafana-data:
+    name: grafana-data
+    driver: local
