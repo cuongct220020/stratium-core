@@ -2,38 +2,44 @@ name: bitcoin-regtest-cluster
 
 services:
   bitcoin-node01:
-    image: public.ecr.aws/bitnami/bitcoin:${BITCOIN_HASH_TAG:-27.0.0}
+    image: lncm/bitcoind:${BITCOIN_VERSION:-v25.0}
     container_name: bitcoin-node01
     hostname: bitcoin-node01
     networks:
-      - engram-net
-      - bitcoin-net
+      bitcoin-net:
+        ipv4_address: 172.21.0.10
     ports:
-      - "18443:18443"
-      - "28332:28332"
-      - "28333:28333"
+      - "18443:18443"   # RPC
+      - "18444:18444"   # P2P
+      - "28332:28332"   # ZMQ block
+      - "28333:28333"   # ZMQ tx
     environment:
       - BITCOIN_NETWORK=regtest
       - BITCOIN_RPC_USER=${BITCOIN_RPC_USER:-engram_admin}
       - BITCOIN_RPC_PASSWORD=${BITCOIN_RPC_PASSWORD:-secure_password_123}
+    env_file:
+      - ../.env
     volumes:
-      - ./data/bitcoin-node01:/bitnami/bitcoin/data
+      - ../data/bitcoin-node01:/home/bitcoin/.bitcoin
     command:
-      - -txindex=1
-      - -zmqpubrawblock=tcp://0.0.0.0:28332
-      - -zmqpubrawtx=tcp://0.0.0.0:28333
-      - -rpcbind=0.0.0.0
-      - -rpcallowip=0.0.0.0/0
-      - -dbcache=100
-      - -maxmempool=50
-      - -maxconnections=25
-      - -par=2
+      -printtoconsole
+      -regtest=1
+      -server=1
+      -txindex=1
+      -rpcuser=${BITCOIN_RPC_USER}
+      -rpcpassword=${BITCOIN_RPC_PASSWORD}
+      -rpcallowip=0.0.0.0/0
+      -rpcbind=0.0.0.0
+      -zmqpubrawblock=tcp://0.0.0.0:28332
+      -zmqpubrawtx=tcp://0.0.0.0:28333
+      -addnode=bitcoin-node02:18444
+      -fallbackfee=0.0002
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "bitcoin-cli", "-rpcuser=engram_admin", "-rpcpassword=secure_password_123", "getblockcount"]
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=${BITCOIN_RPC_USER}", "-rpcpassword=${BITCOIN_RPC_PASSWORD}", "getblockcount"]
       interval: 30s
       timeout: 5s
-      retries: 2
+      retries: 3
       start_period: 20s
     deploy:
       resources:
@@ -44,39 +50,46 @@ services:
           cpus: '0.1'
           memory: 256M
 
+
   bitcoin-node02:
-    image: public.ecr.aws/bitnami/bitcoin:${BITCOIN_HASH_TAG:-27.0.0}
+    image: lncm/bitcoind:${BITCOIN_VERSION:-v25.0}
     container_name: bitcoin-node02
     hostname: bitcoin-node02
     networks:
-      - engram-net
-      - bitcoin-net
+      bitcoin-net:
+        ipv4_address: 172.21.0.11
     ports:
-      - "19443:18443"
-      - "29332:28332"
-      - "29333:28333"
+      - "19443:18443"     # RPC
+      - "19444:18444"     # P2P
+      - "29332:28332"     # ZMQ block
+      - "29333:28333"     # ZMQ tx
     environment:
       - BITCOIN_NETWORK=regtest
       - BITCOIN_RPC_USER=${BITCOIN_RPC_USER:-engram_admin}
       - BITCOIN_RPC_PASSWORD=${BITCOIN_RPC_PASSWORD:-secure_password_123}
+    env_file:
+      - ../.env
     volumes:
-      - ./data/bitcoin-node02:/bitnami/bitcoin/data
+      - ../data/bitcoin-node02:/home/bitcoin/.bitcoin
     command:
-      - -txindex=1
-      - -zmqpubrawblock=tcp://0.0.0.0:28332
-      - -zmqpubrawtx=tcp://0.0.0.0:28333
-      - -rpcbind=0.0.0.0
-      - -rpcallowip=0.0.0.0/0
-      - -dbcache=100
-      - -maxmempool=50
-      - -maxconnections=25
-      - -par=2
+      -printtoconsole
+      -regtest=1
+      -server=1
+      -txindex=1
+      -rpcuser=${BITCOIN_RPC_USER}
+      -rpcpassword=${BITCOIN_RPC_PASSWORD}
+      -rpcallowip=0.0.0.0/0
+      -rpcbind=0.0.0.0
+      -zmqpubrawblock=tcp://0.0.0.0:29332
+      -zmqpubrawtx=tcp://0.0.0.0:29333
+      -addnode=bitcoin-node01:18444
+      -fallbackfee=0.0002
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "bitcoin-cli", "-rpcuser=engram_admin", "-rpcpassword=secure_password_123", "getblockcount"]
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=${BITCOIN_RPC_USER}", "-rpcpassword=${BITCOIN_RPC_PASSWORD}", "getblockcount"]
       interval: 30s
       timeout: 5s
-      retries: 2
+      retries: 3
       start_period: 20s
     deploy:
       resources:

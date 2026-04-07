@@ -46,3 +46,6 @@ Prover.toml
 
 # Verifier inputs (Optional to ignore, but usually not needed)
 Verifier.toml
+
+
+data/
