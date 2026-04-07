@@ -1,0 +1,19 @@
+package types
+
+import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+)
+
+// EngramVoteExtension là gói dữ liệu đính kèm vào mỗi phiếu bầu Pre-commit
+type EngramVoteExtension struct {
+	// 1. Dữ liệu từ DA Sensor (Celestia)
+	DaHeight      uint64 `json:"da_height"`       // Chiều cao khối Engram trong quá khứ được xác minh
+	DaCommitment  []byte `json:"da_commitment"`   // Mã băm gốc của Blob
+	CelestiaProof []byte `json:"celestia_proof"`  // Bao gồm SignedHeader (chữ ký) + ShareProof (Merkle)
+
+	// 2. Dữ liệu từ Settlement Sensor (Bitcoin/Babylon)
+	HSubmitted    uint64 `json:"h_submitted"`     // Khối Engram mới nhất đã vào Mempool BTC
+	HAnchored     uint64 `json:"h_anchored"`      // Khối Engram mới nhất đã sâu 6 blocks trên BTC
+	BtcHeader     []byte `json:"btc_header"`      // Raw bytes của Bitcoin Block Header
+	BabylonProof  []byte `json:"babylon_proof"`   // Chữ ký Schnorr xác thực checkpoint
+}
