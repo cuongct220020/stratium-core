@@ -25,7 +25,7 @@ VARIABLES
     da_gap,                         \* Data Availability layer verification gap
     is_das_failed,                  \* DAS sampling failure state
     peer_count,                     \* Current number of P2P peers
-    safe_blocks,                     \* Hysteresis counter to prevent flapping
+    safe_blocks,                    \* Hysteresis counter to prevent flapping
     reanchoring_proof_valid         \* ZK proof verified onchain/off-chain
 
 vars == <<state, btc_gap, da_gap, peer_count, safe_blocks, reanchoring_proof_valid, is_das_failed>>
@@ -176,14 +176,34 @@ Spec == Init /\ [][Next]_vars /\ Fairness
 
 
 \* -----------------------------------------------------------------------------
-\* SAFETY & LIVENESS PROPERTIES
+\* SAFETY PROPERTIES
 \* -----------------------------------------------------------------------------
-\* Safety: All withdrawals must be locked when in Sovereign or Recovering
+
+\* Safety 1: All withdrawals must be locked when in Sovereign or Recovering
 CircuitBreakerSafety == withdraw_locked <=> (state \in {"SOVEREIGN", "RECOVERING"})
 
+\* Safety 2: Ensure the system never gets stuck (Deadlock-Free).
+NoDeadlockSafety == ENABLED Next
+
+\* Safety 3: The sequential nature of Hysteresis (No skipping steps allowed)
+HysteresisSafety == 
+    [][ (state = "RECOVERING" /\ state' = "ANCHORED") => (safe_blocks = HYSTERESIS_WAIT /\ reanchoring_proof_valid) ]_vars
+
+
+\* -----------------------------------------------------------------------------
+\* LIVENESS PROPERTIES
+\* -----------------------------------------------------------------------------
+
 \* Liveness 1: If critical thresholds are reached, system MUST transition to SOVEREIGN
-CircuitBreakerLiveness == IsCriticalCondition ~> (state = "SOVEREIGN" \/ ~IsCriticalCondition)
+CircuitBreakerLiveness == 
+    IsCriticalCondition ~> (state = "SOVEREIGN" \/ ~IsCriticalCondition)
 
 \* Liveness 2: If in SOVEREIGN and network recovers, system MUST attempt recovery
-RecoveryAttemptLiveness == (state = "SOVEREIGN" /\ IsHealthyCondition) ~> (state = "RECOVERING" \/ ~IsHealthyCondition)
+RecoveryAttemptLiveness == 
+    (state = "SOVEREIGN" /\ IsHealthyCondition) ~> (state = "RECOVERING" \/ ~IsHealthyCondition)
+
+\* Liveness 3: Ensure the recovery process will be completed.
+CompleteRecoveryLiveness == 
+    (state = "RECOVERING" /\ reanchoring_proof_valid /\ IsHealthyCondition) 
+    ~> (state = "ANCHORED" \/ ~IsHealthyCondition \/ ~reanchoring_proof_valid)
 =============================================================================
