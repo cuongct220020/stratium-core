@@ -52,14 +52,14 @@ $$
 
 **Critical condition** (triggers SOVEREIGN):
 
-$$\text{IsCriticalCondition} \triangleq \Delta H_\text{BTC} \geq T_2$$ 
+$$\text{IsCriticalCondition} \triangleq \Delta H_\text{BTC} \geq T_\text{Sovereign}$$ 
 
 **Healthy condition** (prerequisite for recovery):
 
 $$ 
 \begin{aligned}
 \text{IsHealthyCondition} \triangleq\;&
-\Delta H_\text{BTC} < T_1 \\
+\Delta H_\text{BTC} < T_\text{Suspicious} \\
 &\land \Delta H_\text{DA} < T_\text{DA} \\
 &\land \lnot \text{IsDASFailed} \\
 &\land P \geq P_\text{min}
