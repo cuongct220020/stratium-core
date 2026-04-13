@@ -33,13 +33,17 @@ venv/
 .idea/
 .vscode/
 
-
+# TLA+ artifacts
 spec/tla2tools.jar
 states/
+*_TTrace_*.tla
+*_TTrace_*.bin
+
 
 # Noir execution artifacts
 target/
 proofs/
+
 
 # Private inputs
 Prover.toml
@@ -48,4 +52,5 @@ Prover.toml
 Verifier.toml
 
 
+# Local bind mound service data
 data/

@@ -72,6 +72,8 @@ Bitcoin Network (isolated, not exposed):
 └── ZMQ Raw Tx:          28333
 ```
 
+
+
 ## Draft Proposal
 
 Here is the concise summary of the Engram Protocol's modular architecture and Finite State Machine (FSM) design, written in professional English without icons.
@@ -90,18 +92,6 @@ The system achieves consensus on external events (Time-Mismatch resolution) usin
 * **ExtendVote:** Before sending a Pre-commit, each validator queries the external containers and attaches the latest valid DA Proof and Bitcoin Proof to their vote payload.
 * **VerifyVoteExtension:** Upon receiving a vote, validators route the payload to `x/da` and `x/vigilante` for cryptographic verification. Invalid proofs result in immediate vote rejection.
 * **PrepareProposal:** The block proposer aggregates these validated extensions, establishing a globally agreed-upon `H_anchored` and `H_submitted` for the entire network.
-
-## 3. Finite State Machine and Circuit Breaker
-The `x/sovereignty` module governs the network's lifecycle to prevent split-brain scenarios and handle L1 latency. It calculates state transitions based on three variables:
-* `H_local`: Current block height of the Engram network.
-* `H_submitted`: Highest Engram block submitted to the Bitcoin mempool.
-* `H_anchored`: Highest Engram block finalized (6 blocks deep) on Bitcoin.
-
-**State Transitions:**
-* **ANCHORED:** Normal operation. System is fully operational with maximum throughput.
-* **SUSPICIOUS:** Triggered when `(H_local - H_submitted) > Threshold_1`. Indicates internal relayer failure or L1 mempool congestion. The Circuit Breaker activates, halting high-value transactions and bridging while maintaining local liveness.
-* **SOVEREIGN:** Triggered when `(H_submitted - H_anchored) > Threshold_2` (e.g., 6 hours) or Celestia DAS fails completely. The network severs external dependencies, ignores VoteExtension requirements, and relies purely on local PoS consensus to survive extreme L1/DA outages. Re-anchoring occurs via ZK-Proofs once the L1 connection is restored.
-
 
 ## Architecture Flow Diagram
 
@@ -140,4 +130,68 @@ graph TD
     class VE core;
     class XDA,XVIG app;
     class XSOV,S1,S2,S3 fsm;
+```
+
+
+## Layer 2: Consensus & Voting Layer
+
+
+```mermaid
+---
+config:
+  stateDiagram-v2:
+    defaultRenderer: elk
+---
+stateDiagram-v2
+    direction LR
+
+    state "New Round" as NewRound
+    state "Propose" as Propose
+    state "Pre-vote" as Prevote
+    state "Pre-commit" as Precommit
+    state "Commit" as Commit
+
+    [*] --> NewRound
+    
+    NewRound --> Propose: Select Proposer for this round
+    
+    state Propose {
+        [*] --> WaitProposal: Wait for Block Proposal
+        WaitProposal --> SensorValidation: Proposal Received
+        
+        state SensorValidation {
+            [*] --> CheckDA: Check Celestia Blobstream
+            CheckDA --> CheckGap: DA OK
+            CheckGap --> ValidProposal: Gap < T1 (Anchored)
+        }
+        
+        SensorValidation --> InvalidOrTimeout: DA Latency or Gap >= T1
+        WaitProposal --> InvalidOrTimeout: Timeout
+    }
+
+    Propose --> Prevote: Broadcast Vote (Prevote or Nil)
+    
+    state Prevote {
+        [*] --> CollectPrevotes: Gather votes from peers
+        CollectPrevotes --> MajorityPrevote: > 2/3 Prevotes for Block
+        CollectPrevotes --> NilPrevote: > 2/3 Nil Prevotes
+        CollectPrevotes --> TimeoutPrevote: Timeout
+    }
+
+    Prevote --> Precommit: Quorum Reached or Timeout
+    
+    state Precommit {
+        [*] --> CollectPrecommits: Gather final confirmations
+        CollectPrecommits --> MajorityPrecommit: > 2/3 Precommits
+        CollectPrecommits --> NilPrecommit: > 2/3 Nil Precommits
+    }
+
+    Precommit --> Commit: Success (Commitment reached)
+    Precommit --> NewRound: Failure (Move to Round + 1)
+    
+    Commit --> NewRound: Increment Height & Reset Round
+    
+    note right of Prevote: Node locks on Block<br/>if > 2/3 Prevotes received.
+    note left of Precommit: Ledger is updated only<br/>with > 2/3 Precommits.
+    note right of Propose: Sensors act as strict guards<br/>before any Pre-vote is cast.
 ```
