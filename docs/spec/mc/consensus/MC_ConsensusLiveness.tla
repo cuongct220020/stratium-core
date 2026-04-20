@@ -8,17 +8,19 @@ MC_Nodes == {n1, n2, n3}
 MC_Method == {tx1}
 MC_Stake == [n \in MC_Nodes |-> 10]
 
-\* Liveness 1: Hệ thống luôn luôn tạo ra các block được Commit (CCache) mới
-ConsensusProgress == []<>(\E c \in tree : c.type = "C")
 
-\* Liveness 2: Nếu một đề xuất (M) được đưa ra, mạng lưới cuối cùng sẽ chốt một Commit
-MethodCommitted == \A n \in Nodes, m \in Method :
-    (\E c \in tree : c.type = "M" /\ c.caller = n /\ c.method = m) 
-    ~> (\E c \in tree : c.type = "C")
-
-\* Giới hạn không gian trạng thái (Lưu ý: chặn trạng thái có thể gây lỗi liveness giả ở vòng cuối)
+\* State space limitations (Note: state blocking can cause false liveness errors in the final loop)
 StateSpaceLimit == 
     /\ round <= 3
     /\ Cardinality(tree) <= 7
 
+
+\* Liveness 1: The system always generates new commented blocks (CCache).
+ConsensusProgress == []<>(\E c \in tree : c.type = "C")
+
+
+\* Liveness 2: If a proposal (M) is submitted, the network will eventually lock in a Commitment.
+MethodCommitted == \A n \in Nodes, m \in Method :
+    (\E c \in tree : c.type = "M" /\ c.caller = n /\ c.method = m) 
+    ~> (\E c \in tree : c.type = "C")
 =================================================================

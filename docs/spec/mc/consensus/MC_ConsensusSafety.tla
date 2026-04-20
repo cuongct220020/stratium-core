@@ -4,12 +4,12 @@ EXTENDS EngramConsensus, TLC
 CONSTANTS n1, n2, n3, n4, tx1, tx2
 
 
-\* Bounding: Chỉ chạy tối đa 3 vòng
+\* Bounding: Maximum of 3 laps
 StateSpaceLimit == 
     /\ round <= 3
     /\ Cardinality(tree) <= 5
 
-\* Tối ưu Symmetry cho Safety (Rất quan trọng)
+\* Optimize Symmetry for Safety (Rất quan trọng)
 SymmetryPerms == Permutations(Nodes)
 
 MC_Nodes == {n1, n2, n3, n4}
