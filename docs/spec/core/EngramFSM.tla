@@ -46,6 +46,7 @@ da_gap == h_da_local - h_da_verified
 \* -----------------------------------------------------------------------------
 withdraw_locked == state \in {"SOVEREIGN", "RECOVERING"}
 
+IsDAHealthy == (da_gap < T_DA) /\ ~is_das_failed
 
 \* Critical failure conditions (Triggers circuit breaker)
 IsCriticalCondition == btc_gap >= T_SOVEREIGN 
@@ -60,8 +61,7 @@ IsWarningCondition ==
 \* Completely healthy network conditions
 IsHealthyCondition == 
     /\ btc_gap < T_SUSPICIOUS
-    /\ da_gap < T_DA
-    /\ ~is_das_failed
+    /\ IsDAHealthy
     /\ peer_count >= MIN_PEERS
 
 
