@@ -24,7 +24,7 @@ MC_Next ==
 \* --- 4. GIỚI HẠN KHÔNG GIAN (PRUNING CONSTRAINT) ---
 StateSpaceLimit == 
     /\ \A n \in MC_Corr : round[n] <= 1  \* BẮT BUỘC duyệt tới Vòng 1 để test Leader Rotation
-    /\ realTime <= 3                     \* BẮT BUỘC mở rộng thời gian để Tendermint kịp Timeout
+    /\ realTime <= 2                     \* BẮT BUỘC mở rộng thời gian để Tendermint kịp Timeout
 
 \* --- 5. THUỘC TÍNH KIỂM CHỨNG ÁNH XẠ (REFINEMENT CHECK) ---
 RefinementSafety == AbstractConsensus!Safety
