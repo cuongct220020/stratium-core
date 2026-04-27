@@ -156,11 +156,16 @@ Server_AdvanceRealTime ==
     /\ AdvanceRealTime 
     /\ UNCHANGED <<qcs, tcs, fsmVars>>
 
+Server_Byzantine_Data_Withholding == 
+    /\ Byzantine_Data_Withholding 
+    /\ UNCHANGED <<qcs, tcs, fsmVars>>
+
 Server_Next == 
     \/ Server_AdvanceRealTime
     \/ /\ SynchronizedLocalClocks 
        /\ \E p \in Corr: Server_MessageProcessing(p)
     \/ FSM_Next /\ UNCHANGED <<coreVars, temporalVars, invariantVars, bookkeepingVars, action, qcs, tcs>>
+    \/ Server_Byzantine_Data_Withholding
 
 Server_Spec == Server_Init /\ [][Server_Next]_serverVars
 

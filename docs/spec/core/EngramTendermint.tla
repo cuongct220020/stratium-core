@@ -661,6 +661,23 @@ MessageProcessing(p) ==
     \/ OnRoundCatchup(p)
     \/ OnLocalTimerExpire(p)
 
+
+(************************ BYZANTINE DATA WITHHOLDING ATTACK *********************)
+Byzantine_Data_Withholding == 
+    \E r \in Rounds:
+        \* Only activated when the malicious Node is selected as the Leader of this round
+        /\ Proposer[r] \in Faulty
+        \* Ensure it hasn't sent any proposals before.
+        /\ msgsPropose[r] = {} 
+        \* Create a valid structured proposal but intentionally hide data (attestation = FALSE)
+        /\ LET bad_da == [ blockHeight |-> 999, attestation |-> FALSE ] 
+               bad_prop == Proposal("TX_NORMAL", MinTimestamp, r, state, bad_da, h_btc_current, FALSE)
+               bad_msg == [ type |-> "PROPOSAL", src |-> Proposer[r], round |-> r, proposal |-> bad_prop, validRound |-> NilRound ]
+           IN 
+           /\ msgsPropose' = [msgsPropose EXCEPT ![r] = msgsPropose[r] \union {bad_msg}]
+           /\ UNCHANGED <<msgsPrevote, msgsPrecommit, msgsTimeout>>
+           /\ UNCHANGED <<coreVars, temporalVars, fsmVars, invariantVars, evidence, action, receivedTimelyProposal, inspectedProposal>>
+
 (*
  * A system transition. In this specificatiom, the system may eventually deadlock,
  * e.g., when all processes decide. This is expected behavior, as we focus on safety.
