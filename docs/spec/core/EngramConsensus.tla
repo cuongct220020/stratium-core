@@ -10,7 +10,7 @@ CONSTANTS
     TotalStake,
     MaxBTCHeight
 
-(********************* CONSENSUS LAYER VARIABLES (LAYER 2) ***********)
+(********************* CONSENSUS LAYER VARIABLES ***********)
 VARIABLES 
     tree,                 \* Buffer tree (AdoB)
     local_times,          \* Logical time of each node
@@ -184,7 +184,7 @@ Next ==
     \/ FSMStateChange
     \/ BitcoinReorg
 
-(********************* FAIRNESS (LIVENESS) ************************)
+(********************* SAFETY & FAIRNESS (LIVENESS) ************************)
 Safety == Init /\ [][Next]_vars
 
 

@@ -22,7 +22,7 @@ Server_InsertProposal(p) ==
          LET 
             receipt == [
                 blockHeight |-> h_engram_verified, 
-                attestation |-> FSM_IsDAHealthy
+                attestation |-> IsDAHealthy
             ]
             proof_search_space == 
                 IF state = "RECOVERING" /\ safe_blocks >= HYSTERESIS_WAIT

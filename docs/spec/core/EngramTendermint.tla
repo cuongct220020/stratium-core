@@ -135,18 +135,6 @@ Id(v) == v
 \* Time validity check. If we want MaxTimestamp = \infty, set ValidTime(t) == TRUE
 ValidTime(t) == t < MaxTimestamp
 
-\* @type: (PROPMESSAGE) => VALUE;
-MessageValue(msg) == msg.proposal.value
-\* @type: (PROPMESSAGE) => TIME;
-MessageTime(msg) == msg.proposal.timestamp
-\* @type: (PROPMESSAGE) => ROUND;
-MessageRound(msg) == msg.proposal.round
-\* @type: (PROPMESSAGE) => FSM_STATE;
-MessageFSM(msg)   == msg.proposal.fsm_state
-\* @type: (PROPMESSAGE) => DA_RECEIPT;
-MessageDA(msg)    == msg.proposal.da_receipt
-\* @type: (PROPMESSAGE) => BTC_ANCHORED;
-MessageBTC(msg)   == msg.proposal.btc_anchored
 
 \* @type: (TIME, TIME) => Bool;
 IsTimely(processTime, messageTime) ==
@@ -216,34 +204,6 @@ IsValidProposal(prop) ==
 
 
 (********************* PROTOCOL INITIALIZATION ******************************)
-\* \* @type: Set(PROPMESSAGE);
-\* AllFaultyProposals ==
-\*   [
-\*     type      : {"PROPOSAL"}, 
-\*     src       : Faulty,
-\*     round     : Rounds, 
-\*     proposal  : Proposals, 
-\*     validRound: RoundsOrNil
-\*   ]
-
-\* \* @type: Set(PREMESSAGE);
-\* AllFaultyPrevotes ==    
-\*   [
-\*     type : {"PREVOTE"}, 
-\*     src  : Faulty, 
-\*     round: Rounds, 
-\*     id   : Proposals
-\*   ]
-
-\* \* @type: Set(PREMESSAGE);
-\* AllFaultyPrecommits ==
-\*   [
-\*     type : {"PRECOMMIT"}, 
-\*     src  : Faulty, 
-\*     round: Rounds, 
-\*     id   : Proposals
-\*   ]
-
 \* @type: (ROUND) => Set(PROPMESSAGE);
 RoundProposals(r) ==
     [
@@ -261,6 +221,17 @@ BenignRoundsInMessages(msgfun) ==
     \A m \in msgfun[r]:
       r = m.round
 
+(************************ BYZANTINE MESSAGE SETS *********************)
+\* Only generate messages sent by the Faulty node (Extremely small number: T x MaxRound)
+FaultyTimeouts(r) == 
+    { [type |-> "TIMEOUT", src |-> f, round |-> r] : f \in Faulty }
+
+FaultyPrevotes(r) == 
+    { [type |-> "PREVOTE", src |-> f, round |-> r, id |-> Id(NilProposal)] : f \in Faulty }
+
+FaultyPrecommits(r) == 
+    { [type |-> "PRECOMMIT", src |-> f, round |-> r, id |-> Id(NilProposal)] : f \in Faulty }
+
 
 \* The initial states of the protocol. Some faults can be in the system already.
 TM_Init ==
@@ -274,13 +245,10 @@ TM_Init ==
     /\ lockedRound = [p \in Corr |-> NilRound]
     /\ validValue = [p \in Corr |-> NilProposal]
     /\ validRound = [p \in Corr |-> NilRound]
-    \* /\ msgsPropose \in [Rounds -> SUBSET AllFaultyProposals]
-    \* /\ msgsPrevote \in [Rounds -> SUBSET AllFaultyPrevotes]
-    \* /\ msgsPrecommit \in [Rounds -> SUBSET AllFaultyPrecommits]
     /\ msgsPropose = [r \in Rounds |-> {}]
-    /\ msgsPrevote = [r \in Rounds |-> {}]
-    /\ msgsPrecommit = [r \in Rounds |-> {}]
-    /\ msgsTimeout = [r \in Rounds |-> {}]
+    /\ msgsPrevote   = [r \in Rounds |-> FaultyPrevotes(r)]
+    /\ msgsPrecommit = [r \in Rounds |-> FaultyPrecommits(r)]
+    /\ msgsTimeout   = [r \in Rounds |-> FaultyTimeouts(r)]
     /\ receivedTimelyProposal = [p \in Corr |-> {}]
     /\ inspectedProposal = [r \in Rounds, p \in Corr |-> NilTimestamp]
     /\ BenignRoundsInMessages(msgsPropose)
@@ -664,16 +632,6 @@ AdvanceRealTime ==
         /\ UNCHANGED <<msgsPropose, msgsPrevote, msgsPrecommit, msgsTimeout, evidence, receivedTimelyProposal, inspectedProposal>>
         /\ action' = "AdvanceRealTime"
     
-\* advance the local clock of node p to some larger time t, not necessarily by 1
-\* #type: (PROCESS) => Bool;
-\* AdvanceLocalClock(p) ==
-\*     /\ ValidTime(localClock[p])
-\*     /\ \E t \in Timestamps:
-\*       /\ t > localClock[p] 
-\*       /\ localClock' = [localClock EXCEPT ![p] = t]
-\*     /\ UNCHANGED <<coreVars, bookkeepingVars, invariantVars>>
-\*     /\ UNCHANGED realTime
-\*     /\ action' = "AdvanceLocalClock"
 
 OnLocalTimerExpire(p) ==
     /\ localRemTime[p] = 0
@@ -711,7 +669,6 @@ TM_Next ==
     \/ AdvanceRealTime 
     \/ /\ SynchronizedLocalClocks 
        /\ \E p \in Corr: MessageProcessing(p)
-
 
 (* ======================== SAFETY INVARIANTS ============================== *)
 \* I1: All correct nodes that decide must agree on value

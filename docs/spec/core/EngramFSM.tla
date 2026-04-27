@@ -15,9 +15,8 @@ ASSUME
     /\ MIN_PEERS \in Nat
     /\ T_SUSPICIOUS < T_SOVEREIGN
 
------------------------------------------------------------------------------
-\* CALCULATE DYNAMIC GAPS
------------------------------------------------------------------------------
+
+(************************ CALCULATE DYNAMIC GAPS *********************)
 MinVal(a, b) == IF a < b THEN a ELSE b
 
 \* Bitcoin layer verification gap
@@ -26,12 +25,11 @@ btc_gap == h_btc_current - MinVal(h_btc_submitted, h_btc_anchored)
 \* Data Availability layer verification gap
 da_gap == h_engram_current - h_engram_verified
 
-\* -----------------------------------------------------------------------------
-\* MACROS & DERIVED VARIABLES
-\* -----------------------------------------------------------------------------
-withdraw_locked == state \in {"SOVEREIGN", "RECOVERING"}
 
-FSM_IsDAHealthy == (da_gap < T_DA) /\ ~is_das_failed
+(************************ MACROS & DERIVED VARIABLES *********************)
+WithdrawLocked == state \in {"SOVEREIGN", "RECOVERING"}
+
+IsDAHealthy == (da_gap < T_DA) /\ ~is_das_failed
 
 \* Critical failure conditions (Triggers circuit breaker)
 IsCriticalCondition == btc_gap >= T_SOVEREIGN 
@@ -46,13 +44,11 @@ IsWarningCondition ==
 \* Completely healthy network conditions
 IsHealthyCondition == 
     /\ btc_gap < T_SUSPICIOUS
-    /\ FSM_IsDAHealthy
+    /\ IsDAHealthy
     /\ peer_count >= MIN_PEERS
 
 
-\* -----------------------------------------------------------------------------
-\* TYPE INVARIANT & SANITY CHECK
-\* -----------------------------------------------------------------------------
+(************************ TYPE INVARIANT & SANITY CHECK *********************)
 TypeInvariant == 
     /\ state \in {"ANCHORED", "SUSPICIOUS", "SOVEREIGN", "RECOVERING"}
     /\ btc_gap >= 0
@@ -66,9 +62,7 @@ TypeInvariant ==
 SanityCheck == state /= "RECOVERING"
 
 
-\* -----------------------------------------------------------------------------
-\* STATE MACHINE LOGIC
-\* -----------------------------------------------------------------------------
+(************************ STATE MACHINE LOGIC *********************)
 FSM_Init == 
     /\ state = "ANCHORED" 
     /\ h_btc_current = 0 
@@ -202,12 +196,10 @@ FSM_Fairness ==
 FSM_Spec == FSM_Init /\ [][FSM_Next]_fsmVars /\ FSM_Fairness
 
 
-\* -----------------------------------------------------------------------------
-\* SAFETY PROPERTIES
-\* -----------------------------------------------------------------------------
 
+(************************ SAFETY PROPERTIES *********************)
 \* Safety 1: All withdrawals must be locked when in Sovereign or Recovering
-CircuitBreakerSafety == withdraw_locked <=> (state \in {"SOVEREIGN", "RECOVERING"})
+CircuitBreakerSafety == WithdrawLocked <=> (state \in {"SOVEREIGN", "RECOVERING"})
 
 \* Safety 2: Ensure the system never gets stuck (Deadlock-Free).
 NoDeadlockSafety == ENABLED FSM_Next
@@ -217,10 +209,7 @@ HysteresisSafety ==
     [][ (state = "RECOVERING" /\ state' = "ANCHORED") => (safe_blocks = HYSTERESIS_WAIT /\ reanchoring_proof_valid) ]_fsmVars
 
 
-\* -----------------------------------------------------------------------------
-\* LIVENESS PROPERTIES
-\* -----------------------------------------------------------------------------
-
+(************************ LIVENESS PROPERTIES *********************)
 \* Liveness 1: If critical thresholds are reached, system MUST transition to SOVEREIGN
 CircuitBreakerLiveness == 
     IsCriticalCondition ~> (state = "SOVEREIGN" \/ ~IsCriticalCondition)

@@ -4,32 +4,36 @@ CONSTANTS
     T_DA                \* Block gap since the last DA publication verification
 
 
-\* --- 1. TENDERMINT CORE VARIABLES ---
+(* ======================== TENDERMINT CORE VARIABLES  ======================== *)
 VARIABLES 
     round, step, decision, lockedValue, lockedRound, validValue, validRound
 
 coreVars == <<round, step, decision, lockedValue, lockedRound, validValue, validRound>>
 
-\* --- 2. TIME / TEMPORAL VARIABLES ---
+
+(* ======================== TIME / TEMPORAL VARIABLES ======================== *)
 VARIABLES 
     localClock, realTime, localRemTime
 
 temporalVars == <<localClock, realTime, localRemTime>>
 
-\* --- 3. BOOKKEEPING VARIABLES ---
+
+(* ======================== BOOKKEEPING VARIABLES ======================== *)
 VARIABLES 
     msgsPropose, msgsPrevote, msgsPrecommit, msgsTimeout, evidence, action, 
     receivedTimelyProposal, inspectedProposal
 
 bookkeepingVars == <<msgsPropose, msgsPrevote, msgsPrecommit, msgsTimeout, evidence, action, receivedTimelyProposal, inspectedProposal>>
 
-\* --- 4. INVARIANT SUPPORT VARIABLES ---
+
+(* ======================== INVARIANT SUPPORT VARIABLES ======================== *)
 VARIABLES 
     beginRound, endConsensus, lastBeginRound, proposalTime, proposalReceivedTime
 
 invariantVars == <<beginRound, endConsensus, lastBeginRound, proposalTime, proposalReceivedTime>>
 
-\* --- 5. FSM & ENVIRONMENT VARIABLES ---
+
+(* ======================== FSM & ENVIRONMENT VARIABLES ======================== *)
 VARIABLES 
     state, h_btc_current, h_btc_submitted, h_btc_anchored, 
     h_engram_current, h_engram_verified, is_das_failed, peer_count, 
@@ -41,7 +45,8 @@ fsmVars == <<state, h_btc_current, h_btc_submitted, h_btc_anchored, h_engram_cur
 \* Definition for EngramFSM to use
 envVars == <<h_engram_current, h_engram_verified, h_btc_current, h_btc_submitted, h_btc_anchored, peer_count, reanchoring_proof_valid, is_das_failed>>
 
-\* --- 6. SERVER & TENDERMINT TUPLES ---
+
+(* ======================== SERVER & TENDERMINT TUPLES ======================== *)
 VARIABLES 
     qcs, tcs
 
