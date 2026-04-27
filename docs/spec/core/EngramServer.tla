@@ -152,10 +152,14 @@ Server_Init ==
     /\ FSM_Init   
     /\ qcs = {} /\ tcs = {}
 
+Server_AdvanceRealTime == 
+    /\ AdvanceRealTime 
+    /\ UNCHANGED <<qcs, tcs, fsmVars>>
+
 Server_Next == 
-    \/ AdvanceRealTime /\ UNCHANGED <<qcs, tcs, fsmVars>> 
+    \/ Server_AdvanceRealTime
     \/ /\ SynchronizedLocalClocks 
-       /\ \E p \in Corr: Server_MessageProcessing(p) 
+       /\ \E p \in Corr: Server_MessageProcessing(p)
     \/ FSM_Next /\ UNCHANGED <<coreVars, temporalVars, invariantVars, bookkeepingVars, action, qcs, tcs>>
 
 Server_Spec == Server_Init /\ [][Server_Next]_serverVars
@@ -164,21 +168,21 @@ Server_Spec == Server_Init /\ [][Server_Next]_serverVars
 (* ======================== HYBRID INVARIANTS =============================== *)
 \* FSM state consistency in decided proposals
 FSMStateConsistency == 
-    \A p \in Corr: decision[p] /= NilDecision => decision[p][1].fsm_state = state
+    \A p \in Corr: decision[p] /= NilDecision => decision[p].prop.fsm_state = state
 
 \* DA receipt consistency
 DAReceiptConsistency == 
-    \A p \in Corr: (decision[p] /= NilDecision /\ decision[p][1].fsm_state \in {"ANCHORED", "RECOVERING"}) 
-        => decision[p][1].da_receipt.attestation = TRUE
+    \A p \in Corr: (decision[p] /= NilDecision /\ decision[p].prop.fsm_state \in {"ANCHORED", "RECOVERING"}) 
+        => decision[p].prop.da_receipt.attestation = TRUE
 
 \* Bitcoin anchor consistency
 BTCConsistency == 
-    \A p \in Corr: decision[p] /= NilDecision => decision[p][1].btc_anchored = h_btc_anchored
+    \A p \in Corr: decision[p] /= NilDecision => decision[p].prop.btc_anchored = h_btc_anchored
 
 \* ZK Proof consistency
 ZKProofConsistency == 
-    \A p \in Corr: (decision[p] /= NilDecision /\ decision[p][1].fsm_state = "RECOVERING" /\ safe_blocks = HYSTERESIS_WAIT) 
-        => decision[p][1].zk_proof_ref = TRUE
+    \A p \in Corr: (decision[p] /= NilDecision /\ decision[p].prop.fsm_state = "RECOVERING" /\ safe_blocks = HYSTERESIS_WAIT) 
+        => decision[p].prop.zk_proof_ref = TRUE
 
 HybridTendermintInv ==
     /\ FSMStateConsistency
@@ -198,7 +202,7 @@ ServerFSMLiveness ==
 ForcedInclusionLiveness == 
     \A tx \in ValidValues : 
         ([]<> (\E r \in Rounds, p \in Corr : \E m \in msgsPropose[r] : m.src = p /\ m.proposal.value = tx)) 
-        => <>(\E p \in Corr : decision[p] /= NilDecision /\ decision[p][1].value = tx)
+        => <>(\E p \in Corr : decision[p] /= NilDecision /\ decision[p].prop.value = tx)
 
 GST_Reached == 
     /\ SynchronizedLocalClocks 

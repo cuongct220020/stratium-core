@@ -25,13 +25,16 @@ StateSpaceLimit ==
     /\ \A n \in MC_Corr : round[n] <= MaxRound
     /\ realTime <= MaxTimestamp
 
-    \* 2. FSM constraints
+    \* 2. Environment Constraints
     /\ h_btc_current <= MaxBTCHeight
     /\ h_engram_current <= MaxEngramHeight
+    /\ h_engram_verified <= h_engram_current
+    /\ h_btc_submitted <= h_btc_current
+    /\ h_btc_anchored <= h_btc_submitted
 
-    \* 3. Freeze DA and P2P sensors (State combination interference removal)
-    /\ is_das_failed = FALSE
+    \* 3. Controlled Chaos (Tạo nhiễu có kiểm soát)
     /\ peer_count \in {2, 3}
+    /\ is_das_failed \in BOOLEAN
     /\ state \in {"ANCHORED", "SUSPICIOUS", "SOVEREIGN", "RECOVERING"}
 
 
