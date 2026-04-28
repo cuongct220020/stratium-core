@@ -664,6 +664,27 @@ OnRoundCatchup(p) ==
         /\ UNCHANGED <<forced_tx_queue>>
         /\ action' = "OnRoundCatchup"
 
+(************************ IMPROVED PACEMAKER (f+1 TIMEOUTS) *********************)
+\* @type: (PROCESS) => Bool;
+UponfPlusOneTimeoutsAny(p) ==
+    \E r \in {rr \in Rounds: rr > round[p]}:
+        \E MyEvidence \in SUBSET msgsTimeout[r]:
+            LET Timers == { m.src: m \in MyEvidence } IN
+                /\ Cardinality(Timers) >= THRESHOLD1 
+                /\ evidence' = MyEvidence \union evidence
+                
+                \* Call the round-forward function to fast-forward through other honest nodes.
+                /\ StartRound(p, r)
+                
+                /\ UNCHANGED <<localClock, realTime>>
+                /\ UNCHANGED <<endConsensus, proposalTime, proposalReceivedTime>>
+                /\ UNCHANGED <<decision, lockedValue, lockedRound, validValue, validRound>>
+                /\ UNCHANGED <<forced_tx_queue>>            
+                /\ UNCHANGED <<fsmVars>>
+                /\ UNCHANGED <<msgsPropose, msgsPrevote, msgsPrecommit, msgsTimeout, receivedTimelyProposal, inspectedProposal>>
+                /\ action' = "UponfPlusOneTimeoutsAny"
+
+\* @type: (PROCESS) => Bool;
 OnLocalTimerExpire(p) ==
     /\ localRemTime[p] = 0
     /\ BroadcastTimeout(p, round[p])
@@ -707,6 +728,7 @@ MessageProcessing(p) ==
     \/ OnTimeoutPropose(p)
     \/ OnQuorumOfNilPrevotes(p)
     \/ OnRoundCatchup(p)
+    \/ UponfPlusOneTimeoutsAny(p)
     \/ OnLocalTimerExpire(p)
 
 
