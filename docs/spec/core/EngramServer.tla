@@ -39,11 +39,11 @@ Server_InsertProposal(p) ==
                     /\ InsertProposal(p, prop)
                     
                     \* Abstract Pacemaker (LiDO) mapping
-                    /\ LET NewEQC == [ type         |-> "E_QC", 
-                                       round        |-> round[p], 
-                                       caller       |-> p, 
-                                       method       |-> "None", 
-                                       btc_height   |-> h_btc_current ]
+                    /\ LET NewEQC == [ type             |-> "E_QC", 
+                                       round            |-> round[p], 
+                                       caller           |-> p, 
+                                       method           |-> "None", 
+                                       btc_anchored     |-> h_btc_current ]
                        IN qcs' = qcs \cup {NewEQC}
     /\ UNCHANGED <<tcs, fsmVars, censorVars>>
     /\ UNCHANGED <<coreVars, temporalVars>>
@@ -57,11 +57,11 @@ Server_ProposerVotes(p) ==
        \/ UponProposalInProposeAndPrevote(p)
     /\ IF p = Proposer[round[p]] /\ \E m \in msgsPropose[round[p]] : m.src = p THEN
            LET prop == (CHOOSE m \in msgsPropose[round[p]] : m.src = p).proposal
-               NewMQC == [ type       |-> "M_QC", 
-                           round      |-> round[p], 
-                           caller     |-> p, 
-                           method     |-> prop.value, 
-                           btc_height |-> h_btc_current ] 
+               NewMQC == [ type             |-> "M_QC", 
+                           round            |-> round[p], 
+                           caller           |-> p, 
+                           method           |-> prop.value, 
+                           btc_anchored     |-> h_btc_current ] 
            IN qcs' = qcs \cup {NewMQC} /\ tcs' = tcs
        ELSE
            qcs' = qcs /\ tcs' = tcs
@@ -119,10 +119,10 @@ Server_UponTimeoutCert(p) ==
     
     \* 3. Ghi nhận sự kiện TimeoutCert vào tcs cho LiDO
     /\ LET NewTQC == [
-           type       |-> "T_QC",
-           round      |-> round[p],
-           caller     |-> p,
-           btc_height |-> h_btc_current
+           type             |-> "T_QC",
+           round            |-> round[p],
+           caller           |-> p,
+           btc_anchored     |-> h_btc_current
        ]
        IN tcs' = tcs \cup {NewTQC}
        
@@ -239,38 +239,38 @@ ValidCommits ==
         /\ Cardinality({m \in msgsPrecommit[pair[1]] : m.id = pair[2]}) >= THRESHOLD2 }
 
 c_caches_dynamic == {
-    [ type       |-> "C", 
-      c_round    |-> pair[1] + 1, 
-      caller     |-> Proposer[pair[2]], 
-      method     |-> "None",
-      voters     |-> Q_abstract, 
-      btc_height |-> h_btc_current + 2 ] : pair \in ValidCommits
+    [ type              |-> "C", 
+      c_round           |-> pair[1] + 1, 
+      caller            |-> Proposer[pair[2]], 
+      method            |-> "None",
+      voters            |-> Q_abstract, 
+      btc_anchored      |-> h_btc_current + 2 ] : pair \in ValidCommits
 }
 
 mapped_tree ==
     LET e_caches == {
-        [ type       |-> "E",
-          c_round    |-> qc.round + 1,
-          caller     |-> qc.caller,
-          method     |-> "None",
-          voters     |-> Q_abstract,
-          btc_height |-> qc.btc_height + 2 ] : qc \in {q \in qcs : q.type = "E_QC"}
+        [ type              |-> "E",
+          c_round           |-> qc.round + 1,
+          caller            |-> qc.caller,
+          method            |-> "None",
+          voters            |-> Q_abstract,
+          btc_anchored      |-> qc.btc_anchored + 2 ] : qc \in {q \in qcs : q.type = "E_QC"}
     }
         m_caches == {
-        [ type       |-> "M",
-          c_round    |-> qc.round + 1,
-          caller     |-> qc.caller,
-          method     |-> qc.method,
-          voters     |-> {qc.caller},
-          btc_height |-> qc.btc_height + 2 ] : qc \in {q \in qcs : q.type = "M_QC"}
+        [ type              |-> "M",
+          c_round           |-> qc.round + 1,
+          caller            |-> qc.caller,
+          method            |-> qc.method,
+          voters            |-> {qc.caller},
+          btc_anchored      |-> qc.btc_anchored + 2 ] : qc \in {q \in qcs : q.type = "M_QC"}
     }
         t_caches == {
-        [ type       |-> "T",
-          c_round    |-> tc.round + 1,
-          caller     |-> tc.caller,
-          method     |-> "None",
-          voters     |-> Q_abstract,
-          btc_height |-> tc.btc_height + 2 ] : tc \in {t \in tcs : t.type = "T_QC"}
+        [ type              |-> "T",
+          c_round           |-> tc.round + 1,
+          caller            |-> tc.caller,
+          method            |-> "None",
+          voters            |-> Q_abstract,
+          btc_anchored      |-> tc.btc_anchored + 2 ] : tc \in {t \in tcs : t.type = "T_QC"}
     }
     IN e_caches \cup m_caches \cup c_caches_dynamic \cup t_caches
 

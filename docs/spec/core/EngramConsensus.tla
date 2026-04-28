@@ -75,8 +75,8 @@ active(tr, s) ==
 
 \* K-Deep Finality Rule
 IsKDeep(c, k) == 
-    /\ c.btc_height <= h_btc_anchored     \* The anchor point of this block has not been lost due to Reorg.
-    /\ h_btc_current - c.btc_height >= k  \* Bitcoin's on-chain depth has reached a safe level.
+    /\ c.btc_anchored <= h_btc_anchored     \* The anchor point of this block has not been lost due to Reorg.
+    /\ h_btc_current - c.btc_anchored >= k  \* Bitcoin's on-chain depth has reached a safe level.
 
 
 \* Simplify: The branch with the largest total stake is based on the number of voters.
@@ -96,19 +96,19 @@ canElect(tr, c, Q, state_fsm) ==
 (********************* ADOB CORE OPERATIONS ***********************)
 Pull(n) == 
     LET Q == CHOOSE q \in SUBSET Nodes : isSQuorum(q) 
-        VirtualRoot == [type |-> "C", c_round |-> 0, voters |-> {}, btc_height |-> 0]
+        VirtualRoot == [type |-> "C", c_round |-> 0, voters |-> {}, btc_anchored |-> 0]
         ValidCaches == {c \in tree : c.type = "C"} \cup {VirtualRoot}
     IN \E Cmax \in ValidCaches: 
         /\ canElect(tree, Cmax, Q, fsm_state)
         /\ round > local_times[n]
         /\ local_times' = [s \in Nodes |-> IF s \in Q THEN round ELSE local_times[s]]
         /\ LET new_E_cache == [
-               type       |-> "E", 
-               c_round    |-> round, 
-               caller     |-> n, 
-               method     |-> "None", 
-               voters     |-> Q, 
-               btc_height |-> h_btc_current
+               type             |-> "E", 
+               c_round          |-> round, 
+               caller           |-> n, 
+               method           |-> "None", 
+               voters           |-> Q, 
+               btc_anchored     |-> h_btc_current
            ]
            IN tree' = tree \cup {new_E_cache}
         /\ UNCHANGED <<round, rem_time, fsm_state, h_btc_current, h_btc_anchored>>
@@ -121,12 +121,12 @@ Invoke(n, m) ==
         /\ c.caller = n 
         /\ c.c_round = round 
     /\ LET new_M_cache == [
-           type       |-> "M", 
-           c_round    |-> round, 
-           caller     |-> n, 
-           method     |-> m, 
-           voters     |-> {n}, 
-           btc_height |-> h_btc_current
+           type             |-> "M", 
+           c_round          |-> round, 
+           caller           |-> n, 
+           method           |-> m, 
+           voters           |-> {n}, 
+           btc_anchored     |-> h_btc_current
        ]
        IN tree' = tree \cup {new_M_cache} 
     /\ UNCHANGED <<local_times, round, rem_time, fsm_state, h_btc_current, h_btc_anchored>>
@@ -140,12 +140,12 @@ Push(n) ==
         /\ c.c_round = round 
     /\ local_times' = [s \in Nodes |-> IF s \in Q THEN round + 1 ELSE local_times[s]] 
     /\ LET new_C_cache == [
-           type       |-> "C", 
-           c_round    |-> round, 
-           caller     |-> n, 
-           method     |-> "None", 
-           voters     |-> Q, 
-           btc_height |-> h_btc_current
+           type             |-> "C", 
+           c_round          |-> round, 
+           caller           |-> n, 
+           method           |-> "None", 
+           voters           |-> Q, 
+           btc_anchored     |-> h_btc_current
        ]
        IN tree' = tree \cup {new_C_cache} 
     /\ UNCHANGED <<round, rem_time, fsm_state, h_btc_current, h_btc_anchored>>

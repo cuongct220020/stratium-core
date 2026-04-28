@@ -1,6 +1,18 @@
 -------------------- MODULE EngramTendermint ---------------------------
 EXTENDS Integers, FiniteSets, EngramVars
 
+(***************************************************************************)
+(* TODO [FUTURE WORK - APPENDIX]: PIPELINED TENDERMINT (PHASE MERGING)     *)
+(* Goal: Block time < 2s (Optimistic Pre-Confirmations) via LiDO Appx D.   *)
+(*                                                                         *)
+(* Implementation Steps:                                                   *)
+(* 1. REMOVE PRECOMMIT: Delete `msgsPrecommit` and related actions.        *)
+(* 2. OVERLOAD PREVOTE: A `PREVOTE` referencing `r-1` acts as its commit.  *)
+(* 3. DELEGATE COMMIT: Leader[r] delegates block commit to Proposer[r+1].  *)
+(* 4. UPDATE LIVENESS: Committing now needs 2 consecutive honest leaders.  *)
+(***************************************************************************)
+
+
 (********************* PROTOCOL PARAMETERS **********************************)
 \* General protocol parameters
 CONSTANTS
@@ -75,6 +87,10 @@ ValuesOrNil == Values \union {NilValue}
 (************************* ENGRAM EXTERNAL ENTITIES *************************)
 \* @type: Set(STR);
 FSM_State == {"ANCHORED", "SUSPICIOUS", "SOVEREIGN", "RECOVERING"}
+\* @type: STR
+NilFSM_State == "NONE"
+\* @type: Set(STR);
+FSM_StateOrNil == FSM_State \union NilFSM_State
 
 \* @type: Set(Int);
 BTC_Heights == 0..MaxBTCHeight
@@ -85,18 +101,19 @@ BTC_HeightsOrNil == BTC_Heights \union {NilBTCHeight}
 
 \* @type: Set(Int);
 DA_Heights == 0..MaxEngramHeight
-
 \* @type: Set(DA_RECEIPT);
 DA_Receipts == [
     blockHeight: DA_Heights,   \* Height of published block N-k
     attestation: BOOLEAN       \* Verification from Blobstream
 ]
-
 \* @type: DA_RECEIPT;
 NilDA_Receipt == [
     blockHeight  |-> -1,
     attestation  |-> FALSE 
 ]
+
+\* @type: Set(DA_RECEIPT);
+DA_ReceiptsOrNil == DA_Heights \union NilDA_Receipt
 
 (*********************** PROPOSAL & DECISION STRUCTURE **********************)
 \* @type: Set(PROPOSAL);
@@ -104,8 +121,8 @@ Proposals == [
     value: ValuesOrNil,
     timestamp: TimestampsOrNil,
     round: RoundsOrNil,
-    fsm_state: FSM_State,
-    da_receipt: DA_Receipts,
+    fsm_state: FSM_StateOrNil,
+    da_receipt: DA_ReceiptsOrNil,
     btc_anchored: BTC_HeightsOrNil,
     zk_proof_ref: BOOLEAN 
 ]
@@ -114,9 +131,9 @@ NilProposal == [
     value           |-> NilValue, 
     timestamp       |-> NilTimestamp, 
     round           |-> NilRound, 
-    fsm_state       |-> "NONE", 
+    fsm_state       |-> NilFSM_State, 
     da_receipt      |-> NilDA_Receipt, 
-    btc_anchored    |-> -1,
+    btc_anchored    |-> NilBTCHeight,
     zk_proof_ref    |-> FALSE   
 ]
 \* @type: Set(DECISION);
@@ -126,7 +143,7 @@ Decisions == [
 ]
 \* @type: DECISION;
 NilDecision == [
-    prop  |-> NilProposal, 
+    prop  |-> NilProposal,
     round |-> NilRound
 ]
 
@@ -164,6 +181,7 @@ Card(S) == Cardinality(S)
 
 (********************* TIME UTILITIES ******************************)
 \* Time validity check. If we want MaxTimestamp = \infty, set ValidTime(t) == TRUE
+\* @type: (TIME) => Bool;
 ValidTime(t) == t < MaxTimestamp
 
 
@@ -174,9 +192,11 @@ IsTimely(processTime, messageTime) ==
 
 (********************* TRANSACTION & ZK-PROOF HELPERS ******************************)
 \* Helper to identify withdrawal transactions
+\* @type: (STRING) => Bool;
 ContainsWithdrawal(propVal) == propVal = "TX_WITHDRAWAL"
 
 \* Black-box verification: O(1) time complexity simulation for ZK-Proofs
+\* @type: (PROPOSAL) => Bool;
 VerifyZkProof(prop) == 
     /\ prop.zk_proof_ref = TRUE                         \* Leader claims proof exists
     /\ prop.da_receipt.attestation = TRUE               \* DA layer confirms data is available
@@ -210,7 +230,8 @@ IsValidProposal(prop) ==
 
 
 (********************* SENSORS & CENSORSHIP RESISTANCE ******************************)
-\* Censorship sensor 
+\* Censorship sensor
+\* @type: (PROCESS, PROPOSAL) => Bool;
 IsCensoring(p, prop) == 
     \E tx \in forced_tx_queue :
         /\ tx_ignored_rounds[p][tx] >= MaxIgnoreRounds   \* Read from Node p's perspective
@@ -219,12 +240,15 @@ IsCensoring(p, prop) ==
 
 (************************ BYZANTINE MESSAGE SETS *********************)
 \* Only generate messages sent by the Faulty node (Extremely small number: T x MaxRound)
+\* @type: (ROUND) => Set(MESSAGE);
 FaultyTimeouts(r) == 
     { [type |-> "TIMEOUT", src |-> f, round |-> r] : f \in Faulty }
 
+\* @type: (ROUND) => Set(MESSAGE);
 FaultyPrevotes(r) == 
     { [type |-> "PREVOTE", src |-> f, round |-> r, id |-> Id(NilProposal)] : f \in Faulty }
 
+\* @type: (ROUND) => Set(MESSAGE);
 FaultyPrecommits(r) == 
     { [type |-> "PRECOMMIT", src |-> f, round |-> r, id |-> Id(NilProposal)] : f \in Faulty }
 
@@ -288,6 +312,7 @@ TM_Init ==
 
     /\ forced_tx_queue = {"TX_NORMAL"}
     /\ tx_ignored_rounds = [p \in Corr |-> [tx \in ValidValues |-> 0]]
+
 
 (************************ MESSAGE PASSING ********************************)
 \* @type: (PROCESS, ROUND, PROPOSAL, ROUND) => Bool;
@@ -417,7 +442,9 @@ InsertProposal(p, prop) ==
     /\ action' = "InsertProposal"
 
 
-\* a new action used to filter messages that are not on time
+\* - ReceiveProposal: Buffers incoming proposals from the leader. It acts as 
+\* a time-bound filter, only accepting proposals that arrive within the 
+\* synchronous time window (IsTimely).
 \* @type: (PROCESS) => Bool;
 ReceiveProposal(p) ==
   LET r == round[p] IN
@@ -444,6 +471,9 @@ ReceiveProposal(p) ==
       /\ action' = "ReceiveProposal"
 
 
+\* - UponProposalInPropose: The "Gatekeeper". Evaluates a timely proposal. 
+\* If it passes all application-level checks (IsValidProposal, ZK-proofs), 
+\* the node casts a PREVOTE for it. Otherwise, it votes Nil.
 \* @type: (PROCESS) => Bool;
 UponProposalInPropose(p) ==
     LET r == round[p] IN
@@ -482,6 +512,9 @@ UponProposalInPropose(p) ==
         /\ action' = "UponProposalInPropose"
 
 
+\* - UponProposalInProposeAndPrevote: Handles a proposal that carries a 
+\* `validRound` (indicating the network previously locked on this value in 
+\* a prior round). Validates and PREVOTEs accordingly.
 \* @type: (PROCESS) => Bool;
 UponProposalInProposeAndPrevote(p) ==
   LET r == round[p] IN
@@ -505,7 +538,8 @@ UponProposalInProposeAndPrevote(p) ==
       /\ action' = "UponProposalInProposeAndPrevote"
 
 
-
+\* - UponQuorumOfPrevotesAny: Triggered when the node observes a 2/3+ quorum 
+\* of PREVOTEs for anything (including Nil). Advances the state to PRECOMMIT.
 \* @type: (PROCESS) => Bool;
 UponQuorumOfPrevotesAny(p) ==
     /\ step[p] = "PREVOTE" \* line 34 and 61
@@ -525,8 +559,11 @@ UponQuorumOfPrevotesAny(p) ==
             <<msgsPropose, msgsPrevote, (*msgsPrecommit, *)
             (*evidence,*) msgsTimeout, receivedTimelyProposal, inspectedProposal>>
         /\ action' = "UponQuorumOfPrevotesAny"
-                     
 
+
+\* - UponProposalInPrevoteOrCommitAndPrevote: Triggered when a 2/3+ quorum of 
+\* PREVOTEs for a *specific* valid proposal is reached. The node LOCKS the 
+\* value (updates lockedValue/lockedRound) and PRECOMMITs for it.
 \* @type: (PROCESS) => Bool;
 UponProposalInPrevoteOrCommitAndPrevote(p) ==
   LET r == round[p] IN
@@ -554,6 +591,9 @@ UponProposalInPrevoteOrCommitAndPrevote(p) ==
       /\ action' = "UponProposalInPrevoteOrCommitAndPrevote"
 
 
+\* - UponQuorumOfPrecommitsAny: Triggered when a 2/3+ quorum of PRECOMMITs 
+\* for anything is reached, but no specific value won. Advances the network 
+\* to the next round.
 \* @type: (PROCESS) => Bool;
 UponQuorumOfPrecommitsAny(p) ==
     /\ \E MyEvidence \in SUBSET msgsPrecommit[round[p]]:
@@ -580,6 +620,10 @@ UponQuorumOfPrecommitsAny(p) ==
                         
 
 
+\* - UponProposalInPrecommitNoDecision: The ultimate "Commit" function. 
+\* Triggered when the node observes a 2/3+ quorum of PRECOMMITs for a 
+\* *specific* proposal. The node finalizes the block, updates its decision 
+\* state, and halts voting for the current round.
 \* @type: (PROCESS) => Bool;
 UponProposalInPrecommitNoDecision(p) ==
   LET r == round[p] IN
@@ -602,8 +646,9 @@ UponProposalInPrecommitNoDecision(p) ==
       /\ action' = "UponProposalInPrecommitNoDecision"
 
 
-                    
-
+\* - OnTimeoutPropose: Fallback mechanisms. If the 
+\* leader is offline, malicious, or censoring transactions, the node times 
+\* out and casts a Nil PREVOTE to force a round change.
 \* @type: (PROCESS) => Bool;
 OnTimeoutPropose(p) ==
     /\ step[p] = "PROPOSE"
@@ -620,8 +665,8 @@ OnTimeoutPropose(p) ==
     /\ action' = "OnTimeoutPropose"
 
 
-
-
+\* - OnQuorumOfNilPrevotes: Handles the scenario where 2/3+ nodes voted Nil 
+\* in the Prevote phase. Moves the node directly to Precommit Nil.
 \* @type: (PROCESS) => Bool;
 OnQuorumOfNilPrevotes(p) ==
     /\ step[p] = "PREVOTE"
@@ -640,8 +685,9 @@ OnQuorumOfNilPrevotes(p) ==
         /\ action' = "OnQuorumOfNilPrevotes"
 
 
-
-
+\* - OnRoundCatchup: Fast-forward synchronization. If a node falls offline 
+\* and observes f+1 messages from a higher round, it abandons its current 
+\* state and jumps to the higher round to catch up.
 \* @type: (PROCESS) => Bool;
 OnRoundCatchup(p) ==
   \E r \in {rr \in Rounds: rr > round[p]}:
