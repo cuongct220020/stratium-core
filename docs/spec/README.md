@@ -470,8 +470,8 @@ stateDiagram-v2
 
     Propose --> Prevote: Receive valid proposal<br> OR timeout propose expires
 
-    Prevote --> PrevoteBlock: Proposal valid<br> AND no lock conflict\n AND IsValidProposal = TRUE
-    Prevote --> PrevoteNil: Proposal invalid<br> OR locked on different block\n OR no proposal (timeout)\n OR IsCensoring = TRUE
+    Prevote --> PrevoteBlock: Proposal valid<br> AND no lock conflict<br> AND IsValidProposal = TRUE
+    Prevote --> PrevoteNil: Proposal invalid<br> OR locked on <br>different block<br> OR no proposal (timeout)<br> OR IsCensoring = TRUE
 
     PrevoteBlock --> Polka: Broadcast prevote(block)<br> Collect +2/3 prevotes
     PrevoteNil --> NilPolka: Broadcast prevote(nil)<br> Collect +2/3 nil prevotes
@@ -497,9 +497,7 @@ stateDiagram-v2
         - Lock on Polka <br>(+2/3 prevotes)
         - Unlock if new Polka <br>in later round
 
-        EOTS Accountability:
-        - Any double-signing <br>across voting
-          phases <br>yields slashable evidence.
+        EOTS Accountability: <br>Any double-signing <br>across voting phases <br>yields slashable evidence.
     end note
 
     note left of Propose
