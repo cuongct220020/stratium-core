@@ -1,57 +1,57 @@
 # Formal Specification and Verification of the Engram Hybrid Adaptive Consensus: FSM with Sovereign Fallback
 
 ## Table of contents
-  * [Abstract](#abstract)
-  * [1. Problem Statement](#1-problem-statement)
-    * [1.1 Structural Liveness Risk in Modular Blockchains](#11-structural-liveness-risk-in-modular-blockchains)
-    * [1.2 The Missing Dimension: Peripheral Network Health in Consensus](#12-the-missing-dimension-peripheral-network-health-in-consensus)
-  * [2. Proposed Solution: Hybrid Adaptive Consensus with Sovereign Fallback](#2-proposed-solution-hybrid-adaptive-consensus-with-sovereign-fallback)
-    * [2.1 Core Idea](#21-core-idea)
-    * [2.2 FSM States](#22-fsm-states)
-    * [2.3 Key Design Properties](#23-key-design-properties)
-    * [2.4 FSM State Diagram](#24-fsm-state-diagram)
-  * [3. Methodology: Formal Verification via Refinement Mapping](#3-methodology-formal-verification-via-refinement-mapping)
-    * [3.1 The Gap in Existing Verification Frameworks](#31-the-gap-in-existing-verification-frameworks)
-    * [3.2 The LiDO Framework: Reducing Liveness to Safety](#32-the-lido-framework-reducing-liveness-to-safety)
-      * [Mechanized Verification via Refinement Mapping](#mechanized-verification-via-refinement-mapping)
-    * [3.3 Layered Specification Architecture](#33-layered-specification-architecture)
-  * [4. Network Sensors: Measuring Peripheral Layer Health](#4-network-sensors-measuring-peripheral-layer-health)
-    * [4.1 Bitcoin Finality Gap Sensor](#41-bitcoin-finality-gap-sensor)
-    * [4.2 Data Availability Gap Sensor](#42-data-availability-gap-sensor)
-      * [Data Availability Sampling (DAS)](#data-availability-sampling-das)
-    * [4.3 P2P Health Sensor](#43-p2p-health-sensor)
-  * [5. State Transition Conditions](#5-state-transition-conditions)
-    * [Warning Condition](#warning-condition)
-    * [Critical Condition](#critical-condition)
-    * [Healthy Condition](#healthy-condition)
-  * [6. State Transition Logic](#6-state-transition-logic)
-    * [6.1 Transition Definitions](#61-transition-definitions)
-    * [6.2 Re-anchoring via Recursive ZK-Proof](#62-re-anchoring-via-recursive-zk-proof)
-    * [6.3 Hysteresis Mechanism](#63-hysteresis-mechanism)
-  * [7. Consensus Protocol: Hybrid Adaptive Tendermint with Extended Proposal](#7-consensus-protocol-hybrid-adaptive-tendermint-with-extended-proposal)
-  * [8. Security and Safety Analysis](#8-security-and-safety-analysis)
-    * [8.1 State Invariants](#81-state-invariants)
-    * [8.2 Attack Resilience Lemmas](#82-attack-resilience-lemmas)
-  * [9. Liveness Analysis and Autonomous Recovery](#9-liveness-analysis-and-autonomous-recovery)
-    * [9.1 FSM Temporal Properties](#91-fsm-temporal-properties)
-    * [9.2 Transaction-Level Liveness](#92-transaction-level-liveness)
-  * [10. Verification Results](#10-verification-results)
-    * [10.1 Proof Strategy](#101-proof-strategy)
-    * [10.2 Model Parameters](#102-model-parameters)
-    * [10.3 Safety Verification](#103-safety-verification)
-    * [10.4 Liveness Verification](#104-liveness-verification)
-    * [10.5 Interpretation](#105-interpretation)
-  * [11. Future Work](#11-future-work)
-    * [11.1 Pipelined Tendermint (Phase Merging)](#111-pipelined-tendermint-phase-merging)
-    * [11.2 Eclipse Attack Formal Scenario](#112-eclipse-attack-formal-scenario)
-    * [11.3 Parametric Verification](#113-parametric-verification)
-  * [12. How to Run the Verification](#12-how-to-run-the-verification)
-    * [Prerequisites](#prerequisites)
-    * [Safety Verification](#safety-verification)
-    * [Liveness Verification](#liveness-verification)
-    * [Using VS Code](#using-vs-code)
-  * [Appendix: File Structure](#appendix-file-structure)
-  * [References](#references)
+  - [Abstract](#abstract)
+  - [1. Problem Statement](#1-problem-statement)
+    - [1.1 Structural Liveness Risk in Modular Blockchains](#11-structural-liveness-risk-in-modular-blockchains)
+    - [1.2 The Missing Dimension: Peripheral Network Health in Consensus](#12-the-missing-dimension-peripheral-network-health-in-consensus)
+  - [2. Proposed Solution: Hybrid Adaptive Consensus with Sovereign Fallback](#2-proposed-solution-hybrid-adaptive-consensus-with-sovereign-fallback)
+    - [2.1 Core Idea](#21-core-idea)
+    - [2.2 FSM States](#22-fsm-states)
+      - [State Machine Diagram](#state-machine-diagram)
+    - [2.3 Key Design Properties](#23-key-design-properties)
+  - [3. Methodology: Formal Verification via Refinement Mapping](#3-methodology-formal-verification-via-refinement-mapping)
+    - [3.1 The Gap in Existing Verification Frameworks](#31-the-gap-in-existing-verification-frameworks)
+    - [3.2 The LiDO Framework: Reducing Liveness to Safety](#32-the-lido-framework-reducing-liveness-to-safety)
+      - [Mechanized Verification via Refinement Mapping](#mechanized-verification-via-refinement-mapping)
+    - [3.3 Layered Specification Architecture](#33-layered-specification-architecture)
+  - [4. Network Sensors: Measuring Peripheral Layer Health](#4-network-sensors-measuring-peripheral-layer-health)
+    - [4.1 Bitcoin Finality Gap Sensor](#41-bitcoin-finality-gap-sensor)
+    - [4.2 Data Availability Gap Sensor](#42-data-availability-gap-sensor)
+      - [Data Availability Sampling (DAS)](#data-availability-sampling-das)
+    - [4.3 P2P Health Sensor](#43-p2p-health-sensor)
+  - [5. State Transition Conditions](#5-state-transition-conditions)
+    - [Warning Condition](#warning-condition)
+    - [Critical Condition](#critical-condition)
+    - [Healthy Condition](#healthy-condition)
+  - [6. State Transition Logic](#6-state-transition-logic)
+    - [6.1 Transition Definitions](#61-transition-definitions)
+    - [6.2 Re-anchoring via Recursive ZK-Proof](#62-re-anchoring-via-recursive-zk-proof)
+    - [6.3 Hysteresis Mechanism](#63-hysteresis-mechanism)
+  - [7. Consensus Protocol: Hybrid Adaptive Tendermint with Extended Proposal](#7-consensus-protocol-hybrid-adaptive-tendermint-with-extended-proposal)
+  - [8. Security and Safety Analysis](#8-security-and-safety-analysis)
+    - [8.1 State Invariants](#81-state-invariants)
+    - [8.2 Attack Resilience Lemmas](#82-attack-resilience-lemmas)
+  - [9. Liveness Analysis and Autonomous Recovery](#9-liveness-analysis-and-autonomous-recovery)
+    - [9.1 FSM Temporal Properties](#91-fsm-temporal-properties)
+    - [9.2 Transaction-Level Liveness](#92-transaction-level-liveness)
+  - [10. Verification Results](#10-verification-results)
+    - [10.1 Proof Strategy](#101-proof-strategy)
+    - [10.2 Model Parameters](#102-model-parameters)
+    - [10.3 Safety Verification](#103-safety-verification)
+    - [10.4 Liveness Verification](#104-liveness-verification)
+    - [10.5 Interpretation](#105-interpretation)
+  - [11. Future Work](#11-future-work)
+    - [11.1 Pipelined Tendermint (Phase Merging)](#111-pipelined-tendermint-phase-merging)
+    - [11.2 Eclipse Attack Formal Scenario](#112-eclipse-attack-formal-scenario)
+    - [11.3 Parametric Verification](#113-parametric-verification)
+  - [12. How to Run the Verification](#12-how-to-run-the-verification)
+    - [Prerequisites](#prerequisites)
+    - [Safety Verification](#safety-verification)
+    - [Liveness Verification](#liveness-verification)
+    - [Using VS Code](#using-vs-code)
+  - [Appendix: File Structure](#appendix-file-structure)
+  - [References](#references)
 
 ## Abstract
 
@@ -114,19 +114,7 @@ Critically, the consensus object is extended: a valid proposal is no longer mere
 | SOVEREIGN | Active partition | Local PoS | Locked | Full | ~2 sec |
 | RECOVERING | Resolution | Local PoS + pending proof | Locked | Full | ~2 sec |
 
-### 2.3 Key Design Properties
-
-- **Graceful degradation.** Security level decreases monotonically under failure rather than the system halting. Data already written to the chain remains protected.
-
-- **Self-aware consensus.** The FSM transition is not an out-of-band governance action; it is agreed upon within the standard Tendermint consensus pipeline. The FSM state is embedded in each proposal and validated by every prevoting node.
-
-- **Hysteresis.** Recovery from `SOVEREIGN` back to `ANCHORED` requires a sustained healthy period of `HYSTERESIS_WAIT` consecutive blocks and a valid ZK-Proof. This prevents state oscillation ("flapping") caused by intermittent connectivity.
-
-- **ZK-based re-anchoring.** Blocks produced in SOVEREIGN mode are secured by local PoS. When connectivity is restored, a single recursive SNARK aggregates all sovereign transitions into one proof, allowing O(1) verification. No re-execution of sovereign blocks is required.
-
-- **Economic circuit breaker.** Cross-chain withdrawals are locked when the state is `SOVEREIGN` or `RECOVERING`, preventing fund extraction during periods when Bitcoin finality is not available to protect against reversion.
-
-### 2.4 FSM State Diagram
+#### State Machine Diagram
 
 ```mermaid
 stateDiagram-v2
@@ -168,6 +156,18 @@ stateDiagram-v2
     RECOVERING --> SUSPICIOUS : IsWarningCondition
     RECOVERING --> SOVEREIGN  : IsCriticalCondition
 ```
+
+### 2.3 Key Design Properties
+
+- **Graceful degradation.** Security level decreases monotonically under failure rather than the system halting. Data already written to the chain remains protected.
+
+- **Self-aware consensus.** The FSM transition is not an out-of-band governance action; it is agreed upon within the standard Tendermint consensus pipeline. The FSM state is embedded in each proposal and validated by every prevoting node.
+
+- **Hysteresis.** Recovery from `SOVEREIGN` back to `ANCHORED` requires a sustained healthy period of `HYSTERESIS_WAIT` consecutive blocks and a valid ZK-Proof. This prevents state oscillation ("flapping") caused by intermittent connectivity.
+
+- **ZK-based re-anchoring.** Blocks produced in SOVEREIGN mode are secured by local PoS. When connectivity is restored, a single recursive SNARK aggregates all sovereign transitions into one proof, allowing O(1) verification. No re-execution of sovereign blocks is required.
+
+- **Economic circuit breaker.** Cross-chain withdrawals are locked when the state is `SOVEREIGN` or `RECOVERING`, preventing fund extraction during periods when Bitcoin finality is not available to protect against reversion.
 
 
 ## 3. Methodology: Formal Verification via Refinement Mapping
@@ -233,7 +233,7 @@ graph TD
   - `Server_InsertProposal` $\rightarrow$ **Pull** (`E_QC` creation)
   - `Server_ProposerVotes` $\rightarrow$ **Invoke** (`M_QC` creation)
   - `Server_UponProposalInPrecommitNoDecision` $\rightarrow$ **Push** (`C_QC` creation & FSM state sync)
-  - `Server_UponTimeoutCert` $\rightarrow$ Timeout (`T_QC` creation)
+  - `Server_UponTimeoutCert` $\rightarrow$ **Timeout** (`T_QC` creation)
 
 - **Layer 3 — The Concrete Implementations:**
   - **`EngramTendermint.tla` (Protocol Engine)**: The customized CometBFT consensus engine managing the full Propose $\rightarrow$ Prevote $\rightarrow$ Precommit $\rightarrow$ Commit pipeline. It processes the extended proposal structure, simulates Byzantine attacks (data withholding, censorship, timeout flooding), and implements the improved $f+1$ pacemaker (UponfPlusOneTimeoutsAny).
@@ -619,7 +619,7 @@ Formally specified as `CompleteRecoveryLiveness` in `EngramFSM.tla`, part of `Se
 
 **Property L5 (Active Censorship Resistance).** If a Byzantine leader systematically ignores a valid transaction in the `forced_tx_queue` for `MaxIgnoreRounds` consecutive rounds, the `IsCensoring` predicate triggers: honest validators broadcast a TIMEOUT instead of a PREVOTE, forcing a round change and eventually rotating to an honest leader who will include the transaction.
 
-$$\forall\, tx \in \text{ValidValues}: \Bigl(\square\lozenge \bigl(tx \in \text{msgsPropose}\bigr)\Bigr) \implies \lozenge\bigl(\exists\, p \in \text{Corr}: decision[p].value = tx\bigr)$$
+$$\forall tx \in \text{ValidValues}: \Bigl(\square\lozenge \bigl(tx \in \text{msgsPropose}\bigr)\Bigr) \implies \lozenge\bigl(\exists\, p \in \text{Corr}: decision[p].value = tx\bigr)$$
 
 Formally specified as `ForcedInclusionLiveness` in `EngramServer.tla`.
 
