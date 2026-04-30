@@ -19,11 +19,14 @@ Server_InsertProposal(p) ==
     
     \* STATE SPACE CONTROL: Only branch here, before calling the black-box Tendermint
     /\ \E v \in ValidValues:
-         LET 
+         LET
+            target_state == CalculateNextFSMState 
+
             receipt == [
-                blockHeight |-> h_engram_verified, 
-                attestation |-> IsDAHealthy
+                blockHeight     |-> h_engram_verified, 
+                attestation     |-> IsDAHealthy
             ]
+
             proof_search_space == 
                 IF state = "RECOVERING" /\ safe_blocks >= HYSTERESIS_WAIT
                 THEN {TRUE, FALSE}
@@ -32,7 +35,7 @@ Server_InsertProposal(p) ==
             \E proof_found \in proof_search_space:
                 LET prop == IF validValue[p] /= NilProposal
                             THEN validValue[p]
-                            ELSE Proposal(v, localClock[p], round[p], state, 
+                            ELSE Proposal(v, localClock[p], round[p], target_state, 
                                             receipt, h_btc_anchored, proof_found)
                 IN 
                     \* Inject the concrete proposal into Tendermint
@@ -68,7 +71,7 @@ Server_ProposerVotes(p) ==
     /\ action' = "Server_ProposerVotes"
 
 
-\* Hook 3: Intercept the decision moment to trigger FSM recovery and State Sync
+\* Hook 3: Intercept the decision moment to trigger FSM transition and State Sync
 Server_UponProposalInPrecommitNoDecision(p) ==
     \* 1. Execute the core Tendermint decision logic
     /\ UponProposalInPrecommitNoDecision(p)
@@ -78,8 +81,9 @@ Server_UponProposalInPrecommitNoDecision(p) ==
            msg == CHOOSE m \in msgsPropose[r] : m.src = Proposer[r] /\ m.type = "PROPOSAL"
            prop == msg.proposal
        IN
-            \* 3. STATE SYNC: Force local memory to update according to the majority of the network.
-            /\ state' = prop.fsm_state
+            \* 3. TRIGGER FSM TRANSITION & STATE SYNC
+            /\ Execute_FSM_State_Transition(prop.fsm_state)
+
             /\ h_btc_anchored' = prop.btc_anchored
             /\ h_engram_verified' = prop.da_receipt.blockHeight
             
@@ -100,7 +104,7 @@ Server_UponProposalInPrecommitNoDecision(p) ==
                     \* If not in ANCHORED mode, leave the sensor in place and let the FSM make the decision.
                     /\ UNCHANGED <<h_btc_current, h_engram_current, is_das_failed>>
              
-          /\ UNCHANGED <<safe_blocks, peer_count>>
+          /\ UNCHANGED <<peer_count>>
                  
     \* 4. Keep Abstract Pacemaker state & censor sensor unchanged
     /\ UNCHANGED <<qcs, tcs, censorVars>>
@@ -173,8 +177,12 @@ Server_Next ==
     \/ Server_AdvanceRealTime
     \/ /\ SynchronizedLocalClocks 
        /\ \E p \in Corr: Server_MessageProcessing(p)
-    \/ FSM_Next /\ UNCHANGED <<coreVars, temporalVars, invariantVars, bookkeepingVars, censorVars, action, qcs, tcs>>
+    \/ UpdateSensors 
+        /\ UNCHANGED <<coreVars, temporalVars, invariantVars, bookkeepingVars, censorVars>>
+        /\ UNCHANGED <<action, qcs, tcs>>
     \/ Server_Byzantine_Data_Withholding
+
+
 Server_Spec == Server_Init /\ [][Server_Next]_serverVars
 
 

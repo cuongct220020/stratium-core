@@ -23,7 +23,7 @@ MC_Server_Next == Server_Next
 MC_Server_Fairness == 
     /\ WF_serverVars(Server_AdvanceRealTime)
     /\ \A p \in MC_Corr : WF_serverVars(Server_MessageProcessing(p)) 
-    /\ FSM_Fairness
+
 
 MC_Server_Spec == MC_Server_Init /\ [][MC_Server_Next]_serverVars /\ MC_Server_Fairness
 

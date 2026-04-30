@@ -167,7 +167,6 @@ stateDiagram-v2
     SOVEREIGN --> RECOVERING : IsHealthyCondition
 
     RECOVERING --> ANCHORED   : IsHealthyCondition /\ safe_blocks = H_wait /\ pi_RA = TRUE
-    RECOVERING --> SUSPICIOUS : IsWarningCondition
     RECOVERING --> SOVEREIGN  : IsCriticalCondition
 ```
 
@@ -415,13 +414,6 @@ $$
 \end{aligned}
 $$
 
-$$
-\begin{aligned}
-\text{RecoveringToSuspicious} \triangleq\;& state = \text{RECOVERING} \\
-&\land \text{IsWarningCondition} \\
-&\land \lnot \text{IsCriticalCondition}
-\end{aligned}
-$$
 
 $$
 \begin{aligned}

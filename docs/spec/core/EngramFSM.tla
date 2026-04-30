@@ -37,8 +37,7 @@ IsCriticalCondition == btc_gap >= T_SOVEREIGN
 \* Warning conditions for unstable network or risks
 IsWarningCondition == 
     \/ (btc_gap >= T_SUSPICIOUS /\ btc_gap < T_SOVEREIGN)
-    \/ da_gap >= T_DA
-    \/ is_das_failed
+    \/ ~IsDAHealthy
     \/ peer_count < MIN_PEERS
 
 \* Completely healthy network conditions
@@ -62,7 +61,7 @@ TypeInvariant ==
 SanityCheck == state /= "RECOVERING"
 
 
-(************************ STATE MACHINE LOGIC *********************)
+(************************ STATE MACHINE INITIALIZATION *********************)
 FSM_Init == 
     /\ state = "ANCHORED" 
     /\ h_btc_current = 0 
@@ -75,6 +74,7 @@ FSM_Init ==
     /\ safe_blocks = 0 
     /\ reanchoring_proof_valid = FALSE
 
+(************************ ENVIRONMENT SENSORS UPDATE *********************)
 \* Non-deterministic environment variable updates (Simulates real network)
 UpdateSensors ==
     \* The height of a block can only increase or remain constant; each subsequent block cannot exceed the previous one.
@@ -100,101 +100,24 @@ UpdateSensors ==
     /\ UNCHANGED <<state, safe_blocks>>
     /\ UNCHANGED <<censorVars>>
 
+(************************ FSM RULE ENGINE (DYNAMIC STATE) *********************)
+CalculateNextFSMState == 
+    CASE state = "ANCHORED" /\ IsCriticalCondition -> "SOVEREIGN"
+      [] state = "ANCHORED" /\ IsWarningCondition /\ ~IsCriticalCondition -> "SUSPICIOUS"
+      [] state = "SUSPICIOUS" /\ IsCriticalCondition -> "SOVEREIGN"
+      [] state = "SUSPICIOUS" /\ IsHealthyCondition -> "ANCHORED"
+      [] state = "SOVEREIGN" /\ IsHealthyCondition -> "RECOVERING"
+      [] state = "RECOVERING" /\ IsCriticalCondition -> "SOVEREIGN"
+      [] state = "RECOVERING" /\ IsHealthyCondition /\ safe_blocks = HYSTERESIS_WAIT /\ reanchoring_proof_valid = TRUE -> "ANCHORED"
+      [] state = "RECOVERING" /\ IsHealthyCondition /\ safe_blocks < HYSTERESIS_WAIT -> "RECOVERING"
+      [] OTHER -> state
 
-\* FSM state transitions based on sensor data
-AnchoredToSuspicious == 
-    /\ state = "ANCHORED"
-    /\ IsWarningCondition
-    /\ ~IsCriticalCondition
-    /\ state' = "SUSPICIOUS"
-    /\ UNCHANGED <<envVars>>
-    /\ UNCHANGED <<safe_blocks>>
-
-SuspiciousToSovereign == 
-    /\ state = "SUSPICIOUS"
-    /\ IsCriticalCondition
-    /\ state' = "SOVEREIGN"
-    /\ UNCHANGED <<envVars>>
-    /\ UNCHANGED <<safe_blocks>>
-
-AnchoredToSovereign == 
-    /\ state = "ANCHORED"
-    /\ IsCriticalCondition
-    /\ state' = "SOVEREIGN"
-    /\ UNCHANGED <<envVars>>
-    /\ UNCHANGED <<safe_blocks>>
-
-SuspiciousToAnchored == 
-    /\ state = "SUSPICIOUS"
-    /\ IsHealthyCondition
-    /\ state' = "ANCHORED"
-    /\ UNCHANGED <<envVars>>
-    /\ UNCHANGED <<safe_blocks>>
-
-SovereignToRecovering == 
-    /\ state = "SOVEREIGN"
-    /\ IsHealthyCondition
-    /\ state' = "RECOVERING"
-    /\ safe_blocks' = 0
-    /\ UNCHANGED <<envVars>>
-
-
-RecoveringProgress == 
-    /\ state = "RECOVERING"
-    /\ IsHealthyCondition
-    /\ safe_blocks < HYSTERESIS_WAIT
-    /\ safe_blocks' = safe_blocks + 1
-    /\ UNCHANGED <<envVars>>
-    /\ UNCHANGED <<state>>
-
-RecoveringToAnchored == 
-    /\ state = "RECOVERING"
-    /\ IsHealthyCondition
-    /\ safe_blocks = HYSTERESIS_WAIT
-    /\ reanchoring_proof_valid = TRUE
-    /\ state' = "ANCHORED"
-    /\ safe_blocks' = 0
-    /\ reanchoring_proof_valid' = FALSE
-    /\ UNCHANGED <<btcSensorVars, daSensorVars, p2pSensorVars>>
-
-
-RecoveringToSuspicious == 
-    /\ state = "RECOVERING"
-    /\ IsWarningCondition
-    /\ ~IsCriticalCondition
-    /\ state' = "SUSPICIOUS"
-    /\ safe_blocks' = 0
-    /\ UNCHANGED <<envVars>>
-
-
-RecoveringToSovereign == 
-    /\ state = "RECOVERING"
-    /\ IsCriticalCondition
-    /\ state' = "SOVEREIGN"
-    /\ safe_blocks' = 0
-    /\ UNCHANGED <<envVars>>
-
-
-FSM_Transition == 
-    \/ AnchoredToSuspicious \/ SuspiciousToSovereign \/ AnchoredToSovereign 
-    \/ SuspiciousToAnchored \/ SovereignToRecovering \/ RecoveringProgress 
-    \/ RecoveringToAnchored \/ RecoveringToSuspicious \/ RecoveringToSovereign
-
-FSM_Next == UpdateSensors \/ FSM_Transition
-
-
-FSM_Fairness == 
-    /\ WF_fsmVars(AnchoredToSuspicious)
-    /\ WF_fsmVars(SuspiciousToSovereign)
-    /\ WF_fsmVars(AnchoredToSovereign)
-    /\ WF_fsmVars(SuspiciousToAnchored)
-    /\ WF_fsmVars(SovereignToRecovering)
-    /\ WF_fsmVars(RecoveringProgress)
-    /\ WF_fsmVars(RecoveringToAnchored)
-    /\ WF_fsmVars(RecoveringToSuspicious)
-    /\ WF_fsmVars(RecoveringToSovereign)
-
-FSM_Spec == FSM_Init /\ [][FSM_Next]_fsmVars /\ FSM_Fairness
+(************************ FSM TRIGGER EXECUTION *********************)
+Execute_FSM_State_Transition(target_state) == 
+    /\ state' = target_state
+    /\ safe_blocks' = IF target_state = "RECOVERING" /\ state = "SOVEREIGN" THEN 0 
+                      ELSE IF target_state = "RECOVERING" THEN safe_blocks + 1 
+                      ELSE 0
 
 
 
@@ -202,10 +125,7 @@ FSM_Spec == FSM_Init /\ [][FSM_Next]_fsmVars /\ FSM_Fairness
 \* Safety 1: All withdrawals must be locked when in Sovereign or Recovering
 CircuitBreakerSafety == WithdrawLocked <=> (state \in {"SOVEREIGN", "RECOVERING"})
 
-\* Safety 2: Ensure the system never gets stuck (Deadlock-Free).
-NoDeadlockSafety == ENABLED FSM_Next
-
-\* Safety 3: The sequential nature of Hysteresis (No skipping steps allowed)
+\* Safety 2: The sequential nature of Hysteresis (No skipping steps allowed)
 HysteresisSafety == 
     [][ (state = "RECOVERING" /\ state' = "ANCHORED") => (safe_blocks = HYSTERESIS_WAIT /\ reanchoring_proof_valid) ]_fsmVars
 

@@ -1,5 +1,5 @@
 -------------------- MODULE EngramTendermint ---------------------------
-EXTENDS Integers, FiniteSets, EngramVars
+EXTENDS Integers, FiniteSets, EngramVars, EngramFSM
 
 (***************************************************************************)
 (* TODO [FUTURE WORK - APPENDIX]: PIPELINED TENDERMINT (PHASE MERGING)     *)
@@ -209,7 +209,7 @@ VerifyZkProof(prop) ==
 IsValidProposal(prop) == 
     /\ prop.value \in ValidValues
     /\ prop.timestamp \in MinTimestamp..MaxTimestamp
-    /\ prop.fsm_state = state
+    /\ prop.fsm_state = CalculateNextFSMState   \* Cross-check
     
     \* DA Pipeline Check: Data must be available and within the allowed gap
     /\ (prop.fsm_state \in {"ANCHORED", "RECOVERING"}) => 
@@ -436,7 +436,7 @@ InsertProposal(p, prop) ==
     /\ IsValidProposal(prop)               
     
     /\ proposalTime' = [proposalTime EXCEPT ![r] = realTime]
-    /\ UNCHANGED <<temporalVars, coreVars, fsmVars>>
+    /\ UNCHANGED <<temporalVars, coreVars, fsmVars, censorVars>>
     /\ UNCHANGED <<msgsPrevote, msgsPrecommit, msgsTimeout, evidence, receivedTimelyProposal, inspectedProposal>>
     /\ UNCHANGED <<beginRound, endConsensus, lastBeginRound, proposalReceivedTime>>
     /\ action' = "InsertProposal"
