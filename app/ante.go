@@ -4,8 +4,6 @@ import (
 	"errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/engram-network/striatum-core/x/fsm/keeper"
-	fsmtypes "github.com/engram-network/striatum-core/x/fsm/types"
 )
 
 // CircuitBreakerDecorator is an AnteDecorator that runs before transactions are added to the mempool

@@ -4,9 +4,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	"github.com/engram-network/engram-soveregin-fsm/x/sovereignty"
-	"github.com/engram-network/engram-soveregin-fsm/x/da"
-		"github.com/engram-network/engram-soveregin-fsm/x/vigilante"
+	"github.com/cuongct220020/engram-sovereign-fsm/x/sovereignty"
+	"github.com/cuongct220020/engram-sovereign-fsm/x/da"
+	"github.com/cuongct220020/engram-sovereign-fsm/x/vigilante"
 )
 
 // StriatumApp extends the BaseApp of Cosmos SDK

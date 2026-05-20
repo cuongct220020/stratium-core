@@ -4,7 +4,6 @@ import (
 	"os"
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
-	"github.com/engram-network/striatum-core/app"
 )
 
 func main() {

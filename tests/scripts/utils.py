@@ -12,8 +12,8 @@ from typing import Dict, Any, List
 THRESHOLD_SUSPICIOUS = 100
 THRESHOLD_SOVEREIGN = 500
 
-PROMETHEUS_URL = 'http://localhost:9090/api/v1/query_range'
-COMPOSE_FILE = 'compose.yml'
+PROMETHEUS_URL = "http://localhost:9090/api/v1/query_range"
+COMPOSE_FILE = "compose.yml"
 
 # ==========================================
 # 2. STANDARD ACADEMIC PLOT CONFIGURATION (IEEE/ACM)

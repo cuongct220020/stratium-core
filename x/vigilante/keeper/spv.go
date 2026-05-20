@@ -1,6 +1,8 @@
+package keeper
+
 import (
-    babylonspv "github.com/babylonchain/babylon/x/btclightclient/types"
-    babylonschnorr "github.com/babylonchain/babylon/crypto/schnorr"
+    babylonspv "github.com/babylonlabs-io/babylon/x/btclightclient/types"
+    babylonschnorr "github.com/babylonlabs-io/babylon/crypto/schnorr"
 )
 
 

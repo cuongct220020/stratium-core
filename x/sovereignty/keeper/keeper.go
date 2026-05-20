@@ -2,8 +2,7 @@ package keeper
 
 import (
     "github.com/cosmos/cosmos-sdk/codec"
-    storetypes "github.com/cosmos/cosmos-sdk/store/types"
-    dakeeper "engram/x/da/keeper"
+    storetypes "cosmossdk.io/store/types"
     vigilantekeeper "engram/x/vigilante/keeper"
 )
 
