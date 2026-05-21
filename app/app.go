@@ -5,12 +5,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 
 	"github.com/cuongct220020/engram-sovereign-fsm/x/sovereignty"
-	"github.com/cuongct220020/engram-sovereign-fsm/x/da"
-	"github.com/cuongct220020/engram-sovereign-fsm/x/vigilante"
 )
 
-// StriatumApp extends the BaseApp of Cosmos SDK
-type StriatumApp struct {
+// EngramApp extends the BaseApp of Cosmos SDK
+type EngramApp struct {
 	*baseapp.BaseApp
 
 	// Declare Keepers for core modules
@@ -21,8 +19,8 @@ type StriatumApp struct {
 }
 
 // NewStriatumApp initializes the entire network
-func NewStriatumApp(...) *StriatumApp {
-	app := &StriatumApp{
+func NewEngramApp(...) *EngramApp {
+	app := &EngramApp{
 		BaseApp: baseapp.NewBaseApp(...),
 	}
 
@@ -42,28 +40,4 @@ func NewStriatumApp(...) *StriatumApp {
 	// app.ModuleManager.SetOrderBeginBlockers(fsm.ModuleName, ...)
 
 	return app
-}
-
-
-
-// app/app.go
-func VerifyVoteExtensionHandler(daKeeper da.Keeper, vigKeeper vigilante.Keeper) sdk.VerifyVoteExtensionHandler {
-    return func(ctx sdk.Context, req abci.RequestVerifyVoteExtension) (abci.ResponseVerifyVoteExtension, error) {
-        var ext types.EngramVoteExtension
-        if err := ext.Unmarshal(req.VoteExtension); err != nil {
-            return abci.ResponseVerifyVoteExtension{Status: abci.VerifyVoteExtensionStatus_REJECT}, nil
-        }
-
-        // Route to DA Module for cryptographic validation
-        if !daKeeper.VerifyCelestiaProof(ctx, ext.DaHeight, ext.DaCommitment, ext.CelestiaProof) {
-            return abci.ResponseVerifyVoteExtension{Status: abci.VerifyVoteExtensionStatus_REJECT}, nil
-        }
-
-        // Route to Vigilante Module for SPV validation
-        if !vigKeeper.VerifyBitcoinProof(ctx, ext.HSubmitted, ext.HAnchored, ext.BtcHeader, ext.BabylonProof) {
-            return abci.ResponseVerifyVoteExtension{Status: abci.VerifyVoteExtensionStatus_REJECT}, nil
-        }
-
-        return abci.ResponseVerifyVoteExtension{Status: abci.VerifyVoteExtensionStatus_ACCEPT}, nil
-    }
 }

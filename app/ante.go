@@ -22,10 +22,10 @@ func (cbd CircuitBreakerDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 	// 1. Retrieve the current FSM state from the Keeper
     currentState := cbd.fsmKeeper.GetMetadataState(ctx)
 
-	// 2. If the network is in the SOVEREIGN state (Autonomous / Network Partition) [2]
+	// 2. If the network is in the SOVEREIGN state (Autonomous / Network Partition)
 	if currentState == fsmtypes.StateSovereign {
 		for _, msg := range tx.GetMsgs() {
-			// ACTIVATE CIRCUIT BREAKER: Block all withdrawal transactions or cross-chain asset transfers (IBC Transfer) [1, 2]
+			// ACTIVATE CIRCUIT BREAKER: Block all withdrawal transactions or cross-chain asset transfers (IBC Transfer)
 			if isHighRiskTransaction(msg) {
 				return ctx, errors.New("CIRCUIT BREAKER ACTIVE: withdrawals and high-value transactions are halted during SOVEREIGN state")
 			}
