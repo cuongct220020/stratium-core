@@ -975,6 +975,8 @@ sequenceDiagram
 7. Tas, E., et al. (2022). *Babylon: Reusing Bitcoin Mining Power for Proof-of-Stake Security*. arXiv.  
    https://arxiv.org/abs/2207.08392
 
+8. Rehman, Z., Gregory, M. A., Gondal, I., Dong, H., & Ge, M. (2024). *Eclipse Attacks in Blockchain Networks: Detection, Prevention, and Future Directions*. **IEEE Access**, 12, 125523–125553.  
+   https://researchmgt.monash.edu/ws/portalfiles/portal/710203865/710203451-oa.pdf
 
 ## Future Work
 

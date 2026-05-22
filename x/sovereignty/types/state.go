@@ -1,3 +1,8 @@
 package types
 
-// Defines 4 states (`ANCHORED`, `SUSPICIOUS`, `SOVEREIGN`, `RECOVERING`) and triggering events.
+const (
+    StateAnchored   = "ANCHORED"
+    StateSuspicious = "SUSPICIOUS"
+    StateSovereign  = "SOVEREIGN"
+    StateRecovering = "RECOVERING"
+)

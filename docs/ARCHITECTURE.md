@@ -131,3 +131,79 @@ graph TD
     class XDA,XVIG app;
     class XSOV,S1,S2,S3 fsm;
 ```
+
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Người dùng
+    participant CometBFT as CometBFT (Đồng thuận)
+    participant BaseApp as BaseApp (Điều phối)
+    participant Sovereignty as x/sovereignty (Module)
+    participant Sensors as Cảm biến giả lập
+    participant ZKVerifier as Bộ xác minh ZK
+    participant Bank as x/bank (Module)
+
+    Note over User, Bank: 1. Giai đoạn Mempool
+    User->>CometBFT: Gửi Tx (Rút tiền / Gửi ZK-Proof)
+    CometBFT->>BaseApp: Lệnh CheckTx(Tx)
+    BaseApp-->>CometBFT: Trả kết quả (Hợp lệ vào Mempool)
+
+    Note over User, Bank: 2. Giai đoạn Đồng thuận (ABCI 2.0)
+    rect rgb(200, 220, 240)
+        Note right of CometBFT: Leader: Tạo Extended Proposal
+        CometBFT->>BaseApp: Lệnh PrepareProposal(Raw Block)
+        BaseApp->>Sovereignty: Yêu cầu dữ liệu ngoại vi
+        Sovereignty->>Sensors: Đọc trạng thái mạng (BTC, Celestia, P2P)
+        Sensors-->>Sovereignty: Trả về receipts & dữ liệu
+        Sovereignty->>Sovereignty: Tính CalculateNextFSMState
+        Sovereignty-->>BaseApp: Đóng gói Tx + fsm_state + receipts + ZK-Proof (nếu có)
+        BaseApp-->>CometBFT: Trả về Extended Block
+    end
+
+    CometBFT->>CometBFT: Phát tán Extended Block tới mạng P2P
+
+    rect rgb(220, 240, 200)
+        Note right of CometBFT: Validator: Thẩm định khối (Semantic Firewall)
+        CometBFT->>BaseApp: Lệnh ProcessProposal(Extended Block)
+        BaseApp->>Sovereignty: Yêu cầu đối chiếu khối
+        Sovereignty->>Sensors: Tự đọc trạng thái mạng cục bộ
+        
+        alt Khối có chứa ZK-Proof (Trạng thái RECOVERING)
+            Sovereignty->>ZKVerifier: Xác minh ZK-Proof
+            ZKVerifier-->>Sovereignty: Kết quả (Hợp lệ)
+        end
+        
+        Sovereignty->>Sovereignty: So sánh fsm_state & receipts cục bộ vs Khối đề xuất
+        alt Dữ liệu khớp & ZK-Proof hợp lệ
+            Sovereignty-->>BaseApp: Chấp nhận khối
+            BaseApp-->>CometBFT: Trả về Accept (Gửi phiếu Prevote)
+        else Dữ liệu lệch hoặc ZK-Proof sai
+            Sovereignty-->>BaseApp: Từ chối khối
+            BaseApp-->>CometBFT: Trả về Reject (Gửi phiếu Prevote Nil)
+        end
+    end
+
+    Note over User, Bank: 3. Giai đoạn Thực thi & Cầu dao (FinalizeBlock)
+    CometBFT->>BaseApp: Lệnh FinalizeBlock(Block đã chốt)
+    BaseApp->>Sovereignty: Chạy BeginBlocker
+    Sovereignty->>Sovereignty: Cập nhật fsm_state chính thức vào KVStore
+
+    rect rgb(255, 230, 200)
+        Note right of BaseApp: Cầu dao kiểm duyệt (AnteHandler)
+        BaseApp->>BaseApp: Chạy AnteHandler cho Tx Rút tiền
+        BaseApp->>Sovereignty: Đọc fsm_state hiện tại
+        Sovereignty-->>BaseApp: Trả về fsm_state
+        alt fsm_state == SOVEREIGN hoặc RECOVERING
+            BaseApp-->>CometBFT: Từ chối Tx (Cầu dao ngắt)
+        else fsm_state == ANCHORED
+            BaseApp->>Bank: Chuyển Tx tới x/bank
+            Bank-->>BaseApp: Rút tiền thành công
+        end
+    end
+
+    Note over User, Bank: 4. Giai đoạn Chốt sổ & Lưu trữ (Commit)
+    CometBFT->>BaseApp: Lệnh Commit()
+    BaseApp->>BaseApp: Lưu fsm_state và số dư vào KVStore
+    BaseApp-->>CometBFT: Trả về mã băm trạng thái (AppHash)
+```
