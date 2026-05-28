@@ -20,7 +20,7 @@ func NewCircuitBreakerDecorator(fk keeper.Keeper) CircuitBreakerDecorator {
 // AnteHandle implements the Circuit Breaker logic based on the current FSM state
 func (cbd CircuitBreakerDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
 	// 1. Retrieve the current FSM state from the Keeper
-    currentState := cbd.fsmKeeper.GetMetadataState(ctx)
+	currentState := cbd.fsmKeeper.GetMetadataState(ctx)
 
 	// 2. If the network is in the SOVEREIGN state (Autonomous / Network Partition)
 	if currentState == fsmtypes.StateSovereign {

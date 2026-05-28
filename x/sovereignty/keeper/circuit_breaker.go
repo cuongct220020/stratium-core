@@ -6,7 +6,7 @@ import (
 
 // CalculateNextState thực thi logic chuyển trạng thái FSM (The "Brain")
 func CalculateNextState(currentState string, m types.PeripheralMetrics) string {
-	// 1. HIGH-PRIORITY FALLBACK: 
+	// 1. HIGH-PRIORITY FALLBACK:
 	// Nếu vi phạm điều kiện an toàn cốt lõi, bất kể đang ở trạng thái nào cũng phải về SOVEREIGN.
 	if m.BitcoinFinalityGap >= 6 || !m.DaReceiptValid {
 		return types.StateSovereign

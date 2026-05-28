@@ -7,10 +7,10 @@ type PeripheralSnapshot struct {
 }
 
 type PeripheralMetrics struct {
-    BitcoinFinalityGap      uint64 `json:"btc_finality_gap"`
-    DaReceiptValid          bool   `json:"da_receipt_valid"`
-    P2PQualityHealthy       bool   `json:"p2p_quality_healthy"`
-    IsReanchoringProofValid bool   `json:"is_reanchoring_proof_valid"` // Thêm field này
+	BitcoinFinalityGap      uint64 `json:"btc_finality_gap"`
+	DaReceiptValid          bool   `json:"da_receipt_valid"`
+	P2PQualityHealthy       bool   `json:"p2p_quality_healthy"`
+	IsReanchoringProofValid bool   `json:"is_reanchoring_proof_valid"` // Thêm field này
 }
 
 type PeripheralSensorEngine interface {

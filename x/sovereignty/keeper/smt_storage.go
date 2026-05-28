@@ -23,7 +23,9 @@ func (s *BadgerStorage) Get(ctx context.Context, key []byte) ([]byte, error) {
 	var val []byte
 	err := s.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		val, err = item.ValueCopy(nil)
 		return err
 	})
