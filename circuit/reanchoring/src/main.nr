@@ -1,59 +1,44 @@
+// circuit/reanchoring/src/main.nr
 
-fn process_validator_state(
-    validator_id: Field,
-    old_balance: Field,
-    old_reputation: Field,
-    reward_amount: Field,
-    penalty_amount: Field,
-    merkle_path: [Field; 32],
-    state_root_old: Field
-) -> Field {
-    // 1. Reconstruct Old Leaf & Verify Inclusion
-    let old_leaf = std::hash::poseidon::bn254::hash_3([validator_id, old_balance, old_reputation]);
-    
-    // 2. Compute Merkle Root
-    let computed_old_root = std::merkle::compute_merkle_root(old_leaf, validator_id, merkle_path);
-    assert(computed_old_root == state_root_old);
-
-    // 3. Business Logic
-    let new_balance = old_balance + reward_amount - penalty_amount;
-    let new_reputation = old_reputation + 1;
-
-    // 4. Compute New Leaf
-    let new_leaf = std::hash::poseidon::bn254::hash_3([validator_id, new_balance, new_reputation]);
-
-    new_leaf
+struct Header {
+    prev_hash: Field,
+    fsm_state: Field,        // 2: SOVEREIGN, 3: RECOVERING
+    withdrawal_locked: Field, // 1: true, 0: false
+    state_root: Field,
 }
 
+// Giả sử ta chứng minh một chuỗi có độ dài cố định N cho dễ dàng trong Noir
 fn main(
-    state_root_old: pub Field, 
-    state_root_new: pub Field,
-    epoch_id: pub Field,
-    
-    validator_id: Field,
-    old_balance: Field,
-    old_reputation: Field,
-    reward_amount: Field,
-    penalty_amount: Field,
-    merkle_path: [Field; 32]
+    rt_last: pub Field,   // Root của block đã anchored cuối cùng
+    rt_new: pub Field,    // Root của block đề xuất phục hồi
+    headers: [Header; 4], // Ví dụ chuỗi phục hồi có 4 block
 ) {
-    // 1. Process business logic and get the new leaf
-    let new_leaf = process_validator_state(
-        validator_id, 
-        old_balance, 
-        old_reputation, 
-        reward_amount, 
-        penalty_amount, 
-        merkle_path, 
-        state_root_old
-    );
+    // 1. Điều kiện (a): Tính liên tục của chuỗi
+    // Header đầu tiên phải trỏ về rt_last (hoặc hash của header trước đó)
+    // Và các header phải nối tiếp nhau bằng Poseidon hash
+    
+    // Lưu ý: Poseidon2 trong Noir thường cần cấu hình tham số
+    for i in 1..4 {
+        let computed_prev_hash = std::hash::poseidon::bn254::hash_1([
+            // Hash header trước đó
+            hash_header(headers[i-1]) 
+        ]);
+        assert(headers[i].prev_hash == computed_prev_hash);
+    }
 
-    // 2. Compute the new State Root
-    let computed_new_root = std::merkle::compute_merkle_root(new_leaf, validator_id, merkle_path);
+    // 2. Điều kiện (b) & (c): Chính sách FSM và Bảo mật
+    for i in 0..4 {
+        // FSM State phải là SOVEREIGN (2) hoặc RECOVERING (3)
+        assert(headers[i].fsm_state == 2 || headers[i].fsm_state == 3);
+        // Withdrawals phải được khóa
+        assert(headers[i].withdrawal_locked == 1);
+    }
 
-    // 3. Final constraint
-    // assert(computed_new_root == state_root_new);
+    // 3. Điều kiện (d): Binding root
+    assert(headers[0].prev_hash == rt_last); 
+    assert(headers[3].state_root == rt_new);
+}
 
-    // 4. Identity Binding
-    let _bound_identity = validator_id * epoch_id; 
+fn hash_header(h: Header) -> Field {
+    std::hash::poseidon::bn254::hash_4([h.prev_hash, h.fsm_state, h.withdrawal_locked, h.state_root])
 }

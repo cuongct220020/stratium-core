@@ -4,8 +4,6 @@ import (
 	"errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/engram-network/striatum-core/x/fsm/keeper"
-	fsmtypes "github.com/engram-network/striatum-core/x/fsm/types"
 )
 
 // CircuitBreakerDecorator is an AnteDecorator that runs before transactions are added to the mempool
@@ -22,12 +20,12 @@ func NewCircuitBreakerDecorator(fk keeper.Keeper) CircuitBreakerDecorator {
 // AnteHandle implements the Circuit Breaker logic based on the current FSM state
 func (cbd CircuitBreakerDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
 	// 1. Retrieve the current FSM state from the Keeper
-    currentState := cbd.fsmKeeper.GetMetadataState(ctx)
+	currentState := cbd.fsmKeeper.GetMetadataState(ctx)
 
-	// 2. If the network is in the SOVEREIGN state (Autonomous / Network Partition) [2]
+	// 2. If the network is in the SOVEREIGN state (Autonomous / Network Partition)
 	if currentState == fsmtypes.StateSovereign {
 		for _, msg := range tx.GetMsgs() {
-			// ACTIVATE CIRCUIT BREAKER: Block all withdrawal transactions or cross-chain asset transfers (IBC Transfer) [1, 2]
+			// ACTIVATE CIRCUIT BREAKER: Block all withdrawal transactions or cross-chain asset transfers (IBC Transfer)
 			if isHighRiskTransaction(msg) {
 				return ctx, errors.New("CIRCUIT BREAKER ACTIVE: withdrawals and high-value transactions are halted during SOVEREIGN state")
 			}

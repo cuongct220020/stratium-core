@@ -1,35 +1,50 @@
 package keeper
 
 import (
-    "github.com/cosmos/cosmos-sdk/codec"
-    storetypes "github.com/cosmos/cosmos-sdk/store/types"
-    dakeeper "engram/x/da/keeper"
-    vigilantekeeper "engram/x/vigilante/keeper"
+	"cosmossdk.io/collections"
+	"cosmossdk.io/core/store"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cuongct220020/engram-sovereign-fsm/x/sovereignty/types"
+	"github.com/iden3/go-merkletree-sql/v2"
 )
 
 type Keeper struct {
-    cdc             codec.BinaryCodec
-    storeKey        storetypes.StoreKey
-    
-    // Injected Sensor Modules
-    daKeeper        dakeeper.Keeper
-    vigilanteKeeper vigilantekeeper.Keeper
-	
-	StateTree       *SovereignSMT
+	cdc          codec.Codec
+	storeService store.KVStoreService
+	Schema       collections.Schema
+
+	// State lưu trữ FSM
+	FSMState   collections.Item[string]
+	SafeBlocks collections.Item[uint64]
+	Metrics    collections.Item[types.PeripheralMetrics]
+
+	// SMT Tree
+	Tree *merkletree.MerkleTree
 }
 
-func NewKeeper(cdc codec.BinaryCodec, key storetypes.StoreKey, daK dakeeper.Keeper, vigK vigilantekeeper.Keeper) Keeper {
+func NewKeeper(storeService store.KVStoreService, cdc codec.Codec, smtStore merkletree.Storage) *Keeper {
+	sb := collections.NewSchemaBuilder(storeService)
 
-	smt, err := InitSMT(smtPath)
+	k := &Keeper{
+		cdc:          cdc,
+		storeService: storeService,
+		FSMState:     collections.NewItem(sb, collections.NewPrefix(1), "fsm_state", collections.StringValue),
+		SafeBlocks:   collections.NewItem(sb, collections.NewPrefix(2), "safe_blocks", collections.Uint64Value),
+		Metrics:      collections.NewItem(sb, collections.NewPrefix(3), "metrics", collections.ProtoValue[types.PeripheralMetrics](cdc)),
+	}
+
+	// Khởi tạo SMT với storage adapter được inject vào
+	tree, err := merkletree.NewMerkleTree(context.Background(), smtStore, 256)
 	if err != nil {
-		panic("Not initialization SMT BadgerDB: " + err.Error())
+		panic(err)
 	}
+	k.Tree = tree
 
-	return Keeper{
-		cdc:             cdc,
-		storeKey:        key,
-		daKeeper:        daK,
-		vigilanteKeeper: vigK,
-		StateTree:       smt,
+	schema, err := sb.Build()
+	if err != nil {
+		panic(err)
 	}
+	k.Schema = schema
+
+	return k
 }

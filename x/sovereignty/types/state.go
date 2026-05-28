@@ -1,1 +1,8 @@
-// Defines 4 states (`ANCHORED`, `SUSPICIOUS`, `SOVEREIGN`, `RECOVERING`) and triggering events.
+package types
+
+const (
+	StateAnchored   = "ANCHORED"
+	StateSuspicious = "SUSPICIOUS"
+	StateSovereign  = "SOVEREIGN"
+	StateRecovering = "RECOVERING"
+)

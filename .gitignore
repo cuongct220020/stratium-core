@@ -69,3 +69,6 @@ data/
 
 # Currently unnecessary file
 docs/spec/core/EngramTypes.tla
+
+
+build/
